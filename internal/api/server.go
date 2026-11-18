@@ -18,11 +18,13 @@ import (
 	"github.com/backlogbasher/backlogbasher/internal/db"
 	"github.com/backlogbasher/backlogbasher/internal/hltb"
 	"github.com/backlogbasher/backlogbasher/internal/models"
+	"github.com/backlogbasher/backlogbasher/internal/steamgriddb"
 )
 
 type Server struct {
 	store     *db.Store
 	hltbSvc   *hltb.Service
+	sgdb      *steamgriddb.Client
 	uploadDir string
 	staticFS  fs.FS
 	mux       *http.ServeMux
@@ -36,6 +38,7 @@ func NewServer(store *db.Store, uploadDir string, staticFS fs.FS) (*Server, erro
 	s := &Server{
 		store:     store,
 		hltbSvc:   hltb.NewService(),
+		sgdb:      steamgriddb.NewClient(),
 		uploadDir: uploadDir,
 		staticFS:  staticFS,
 		mux:       http.NewServeMux(),
@@ -547,6 +550,13 @@ func (s *Server) handleHLTB(w http.ResponseWriter, r *http.Request) {
 		title = body.Title
 	}
 	est := s.hltbSvc.FetchEstimate(title)
+	if est.CoverURL == "" && s.sgdb.Enabled() {
+		lookupTitle := est.MatchedTitle
+		if lookupTitle == "" {
+			lookupTitle = title
+		}
+		est.CoverURL = s.sgdb.FetchCoverURL(lookupTitle)
+	}
 	writeJSON(w, http.StatusOK, est)
 }
 

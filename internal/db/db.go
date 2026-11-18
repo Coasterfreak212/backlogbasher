@@ -80,6 +80,7 @@ func (s *Store) migrate() error {
 			primary_device_id INTEGER NULL REFERENCES devices(id) ON DELETE SET NULL,
 			genre TEXT NOT NULL DEFAULT '',
 			release_year INTEGER NOT NULL DEFAULT 0,
+			cover_url TEXT NOT NULL DEFAULT '',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 	}
@@ -89,6 +90,8 @@ func (s *Store) migrate() error {
 			return fmt.Errorf("exec migration (%s): %w", q, err)
 		}
 	}
+	// Safe migration for existing databases without cover_url
+	_, _ = s.db.Exec(`ALTER TABLE games ADD COLUMN cover_url TEXT NOT NULL DEFAULT ''`)
 	return nil
 }
 

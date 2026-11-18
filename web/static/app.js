@@ -659,6 +659,7 @@
           );
           return `
             <div class="preset-mini-card">
+              <img src="${escapeHTML(p.photo_url || '/assets/rig-custom.svg')}" alt="${escapeHTML(p.name)}" style="width:100%;height:88px;object-fit:cover;border-radius:6px;margin-bottom:8px;background:#0b0f15;" loading="lazy" />
               <div class="preset-mini-top">
                 <span class="preset-mini-name">${escapeHTML(p.name)}</span>
                 <span class="tier-badge">T${p.performance_tier}</span>

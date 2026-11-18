@@ -58,6 +58,7 @@ type Game struct {
 	PrimaryDeviceName     string                `json:"primary_device_name"`
 	Genre                 string                `json:"genre"`
 	ReleaseYear           int                   `json:"release_year"`
+	CoverURL              string                `json:"cover_url,omitempty"`
 	Compatibility         []DeviceCompatibility `json:"compatibility"`
 	CreatedAt             string                `json:"created_at"`
 }
@@ -129,6 +130,7 @@ type HLTBEstimate struct {
 	SuggestedEcosystem   string  `json:"suggested_ecosystem,omitempty"`
 	Genre                string  `json:"genre,omitempty"`
 	ReleaseYear          int     `json:"release_year,omitempty"`
+	CoverURL             string  `json:"cover_url,omitempty"`
 	Source               string  `json:"source"` // "hltb_live", "local_catalog", "manual_required"
 	Found                bool    `json:"found"`
 	Message              string  `json:"message"`
