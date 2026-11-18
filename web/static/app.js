@@ -168,24 +168,27 @@
       .sort((a, b) => a.hltb_main - b.hltb_main)
       .slice(0, 4);
 
-    const avgHours = state.devices.length
-      ? state.devices.reduce((s, d) => s + (d.total_hours || 0), 0) / state.devices.length
-      : 0;
-    const neglected = state.devices.filter(
-      (d) => (d.total_hours || 0) === 0 || (avgHours > 0 && (d.total_hours || 0) < avgHours * 0.2)
-    );
+    const utils = (state.stats && state.stats.device_utilization) || [];
+    const neglected = utils.filter((u) => u.health_status === 'Neglected');
 
     const playingHTML = playing.length
       ? playing
           .slice(0, 4)
           .map((g) => {
             const pct = g.hltb_main > 0 ? Math.min(100, Math.round((g.hours_logged / g.hltb_main) * 100)) : 0;
-            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-              <div>
-                <div style="font-weight:600;color:#e2e8f0;">${escapeHTML(g.title)}</div>
-                <div style="font-size:0.78rem;color:#94a3b8;">${g.hours_logged.toFixed(1)}h / ${g.hltb_main > 0 ? g.hltb_main.toFixed(1) + 'h' : '?'} (${pct}%)</div>
+            const eco = g.primary_ecosystem || g.ecosystem || 'Steam';
+            const thumb = g.cover_url
+              ? `<img src="${escapeHTML(g.cover_url)}" alt="${escapeHTML(g.title)}" style="width:28px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;background:#0d121a;" loading="lazy" />`
+              : '';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                ${thumb}
+                <div style="min-width:0;">
+                  <div style="font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(g.title)}</div>
+                  <div style="font-size:0.78rem;color:#94a3b8;">${g.hours_logged.toFixed(1)}h / ${g.hltb_main > 0 ? g.hltb_main.toFixed(1) + 'h' : '?'} (${pct}%)</div>
+                </div>
               </div>
-              <span class="eco-badge eco-${escapeHTML(g.ecosystem)}">${escapeHTML(g.ecosystem)}</span>
+              <span class="eco-badge eco-${escapeHTML(eco)}">${escapeHTML(eco)}</span>
             </div>`;
           })
           .join('')
@@ -193,24 +196,36 @@
 
     const quickWinsHTML = quickWins.length
       ? quickWins
-          .map(
-            (g) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-              <span style="font-weight:500;color:#e2e8f0;">${escapeHTML(g.title)}</span>
-              <span style="font-size:0.8rem;color:#38bdf8;font-family:monospace;">~${g.hltb_main.toFixed(1)}h</span>
-            </div>`
-          )
+          .map((g) => {
+            const thumb = g.cover_url
+              ? `<img src="${escapeHTML(g.cover_url)}" alt="${escapeHTML(g.title)}" style="width:26px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;background:#0d121a;" loading="lazy" />`
+              : '';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);gap:10px;">
+              <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                ${thumb}
+                <span style="font-weight:500;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(g.title)}</span>
+              </div>
+              <span style="font-size:0.8rem;color:#38bdf8;font-family:monospace;flex-shrink:0;">~${g.hltb_main.toFixed(1)}h</span>
+            </div>`;
+          })
           .join('')
       : `<div style="color:#64748b;font-size:0.85rem;">No sub-5h backlog games found.</div>`;
 
     const neglectedHTML = neglected.length
       ? neglected
           .slice(0, 4)
-          .map(
-            (d) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-              <span style="font-weight:500;color:#fbbf24;">${escapeHTML(d.name)}</span>
-              <span style="font-size:0.78rem;color:#94a3b8;">${(d.total_hours || 0).toFixed(1)}h logged</span>
-            </div>`
-          )
+          .map((u) => {
+            const thumb = u.photo_url
+              ? `<img src="${escapeHTML(u.photo_url)}" alt="${escapeHTML(u.device_name)}" style="width:36px;height:26px;object-fit:contain;border-radius:4px;background:#0d121a;padding:2px;flex-shrink:0;" loading="lazy" />`
+              : '';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);gap:10px;">
+              <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                ${thumb}
+                <span style="font-weight:500;color:#fbbf24;">${escapeHTML(u.device_name)}</span>
+              </div>
+              <span style="font-size:0.78rem;color:#94a3b8;">${(u.total_hours_logged || 0).toFixed(1)}h logged</span>
+            </div>`;
+          })
           .join('')
       : `<div style="color:#34d399;font-size:0.85rem;">All rigs are actively getting love!</div>`;
 
@@ -278,13 +293,19 @@
         const ecoPills = (u.ecosystems || [])
           .map((e) => `<span class="eco-badge eco-${escapeHTML(e)}">${escapeHTML(e)}</span>`)
           .join('');
+        const photoThumb = u.photo_url
+          ? `<img src="${escapeHTML(u.photo_url)}" alt="${escapeHTML(u.device_name)}" style="width:56px;height:42px;object-fit:contain;border-radius:6px;background:#0d121a;padding:3px;border:1px solid rgba(255,255,255,0.08);flex-shrink:0;" loading="lazy" />`
+          : '';
 
         return `
           <article class="util-card ${isNeglected ? 'neglected' : ''}">
             <div class="util-card-top">
-              <div>
-                <div class="util-device-name">${escapeHTML(u.device_name)}</div>
-                <div class="util-device-sub">${escapeHTML(TIER_LABELS[u.performance_tier] || `Tier ${u.performance_tier}`)}</div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${photoThumb}
+                <div>
+                  <div class="util-device-name">${escapeHTML(u.device_name)}</div>
+                  <div class="util-device-sub">${escapeHTML(TIER_LABELS[u.performance_tier] || `Tier ${u.performance_tier}`)}</div>
+                </div>
               </div>
               <span class="health-badge health-${escapeHTML(u.health_status)}">${escapeHTML(healthLabel)}</span>
             </div>
@@ -376,6 +397,9 @@
       .map((m, idx) => {
         const g = m.game;
         const reasonsHTML = (m.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('');
+        const coverImg = g.cover_url
+          ? `<img src="${escapeHTML(g.cover_url)}" alt="${escapeHTML(g.title)}" style="width:58px;height:86px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;background:#0d121a;" loading="lazy" />`
+          : '';
         return `
           <article class="rec-card ${idx === 0 ? 'rank-1' : ''}">
             <div class="rec-rank-row">
@@ -385,10 +409,13 @@
               </span>
             </div>
 
-            <div>
-              <h3 class="rec-title">${escapeHTML(g.title)}</h3>
-              <div class="game-sub-meta" style="margin-top:3px;">
-                Target Rig: <strong>${escapeHTML(m.target_device_name)}</strong> (Tier ${m.target_device_tier})
+            <div style="display:flex;align-items:center;gap:12px;">
+              ${coverImg}
+              <div>
+                <h3 class="rec-title">${escapeHTML(g.title)}</h3>
+                <div class="game-sub-meta" style="margin-top:3px;">
+                  Target Rig: <strong>${escapeHTML(m.target_device_name)}</strong> (Tier ${m.target_device_tier})
+                </div>
               </div>
             </div>
 
@@ -495,15 +522,21 @@
             : `<span class="game-sub-meta">No owned rig configured for ${escapeHTML(g.primary_ecosystem)} ecosystem</span>`;
 
         const subInfo = [g.genre, g.release_year ? String(g.release_year) : ''].filter(Boolean).join(' • ');
+        const coverThumb = g.cover_url
+          ? `<img src="${escapeHTML(g.cover_url)}" alt="${escapeHTML(g.title)}" style="width:44px;height:64px;object-fit:cover;border-radius:5px;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;background:#0d121a;" loading="lazy" />`
+          : `<div style="width:44px;height:64px;border-radius:5px;background:#131b26;border:1px dashed rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#64748b;flex-shrink:0;">NO ART</div>`;
 
         return `
           <tr>
             <td>
-              <div class="game-title-cell">
-                <span class="game-title-text">${escapeHTML(g.title)}</span>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-                  <span class="eco-badge eco-${escapeHTML(g.primary_ecosystem)}">${escapeHTML(g.primary_ecosystem)}</span>
-                  ${subInfo ? `<span class="game-sub-meta">${escapeHTML(subInfo)}</span>` : ''}
+              <div style="display:flex;align-items:center;gap:12px;">
+                ${coverThumb}
+                <div class="game-title-cell">
+                  <span class="game-title-text">${escapeHTML(g.title)}</span>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                    <span class="eco-badge eco-${escapeHTML(g.primary_ecosystem)}">${escapeHTML(g.primary_ecosystem)}</span>
+                    ${subInfo ? `<span class="game-sub-meta">${escapeHTML(subInfo)}</span>` : ''}
+                  </div>
                 </div>
               </div>
             </td>
@@ -659,7 +692,7 @@
           );
           return `
             <div class="preset-mini-card">
-              <img src="${escapeHTML(p.photo_url || '/assets/rig-custom.svg')}" alt="${escapeHTML(p.name)}" style="width:100%;height:88px;object-fit:cover;border-radius:6px;margin-bottom:8px;background:#0b0f15;" loading="lazy" />
+              <img src="${escapeHTML(p.photo_url)}" alt="${escapeHTML(p.name)}" style="width:100%;height:96px;object-fit:contain;padding:6px;border-radius:6px;margin-bottom:8px;background:#0d121a;border:1px solid rgba(255,255,255,0.06);" loading="lazy" />
               <div class="preset-mini-top">
                 <span class="preset-mini-name">${escapeHTML(p.name)}</span>
                 <span class="tier-badge">T${p.performance_tier}</span>
@@ -734,14 +767,14 @@
 
     hwGrid.innerHTML = state.devices
       .map((d) => {
-        const photoSrc = d.photo_url || '/assets/rig-custom.svg';
+        const photoSrc = d.photo_url || '';
         const ecoBadges = (d.ecosystems || [])
           .map((e) => `<span class="eco-badge eco-${escapeHTML(e)}">${escapeHTML(e)}</span>`)
           .join('');
         return `
           <article class="rig-card">
-            <div class="rig-photo-frame">
-              <img src="${escapeHTML(photoSrc)}" alt="${escapeHTML(d.name)}" loading="lazy" />
+            <div class="rig-photo-frame" style="background:#0d121a;">
+              <img src="${escapeHTML(photoSrc)}" alt="${escapeHTML(d.name)}" style="object-fit:contain;padding:8px;" loading="lazy" />
               <span class="rig-tier-overlay">${escapeHTML(TIER_LABELS[d.performance_tier] || `Tier ${d.performance_tier}`)}</span>
             </div>
             <div class="rig-body">
@@ -797,7 +830,7 @@
     });
   }
 
-  // --- Modal Management: Game Modal & Auto-Fetch HLTB ---
+  // --- Modal Management: Game Modal & Auto-Fetch HLTB + SteamGridDB ---
   function openGameModal(game = null) {
     const modal = document.getElementById('modal-game');
     const titleEl = document.getElementById('modal-game-title');
@@ -811,6 +844,8 @@
     titleEl.textContent = game ? `Edit Game — ${game.title}` : 'Add Game to Spec-Aware Library';
 
     document.getElementById('game-title-input').value = game ? game.title : '';
+    const coverInput = document.getElementById('game-cover-url-input');
+    if (coverInput) coverInput.value = game ? game.cover_url || '' : '';
     document.getElementById('game-ecosystem-select').value = game ? game.primary_ecosystem : 'Steam';
     document.getElementById('game-status-select').value = game ? game.status : 'Backlog';
     document.getElementById('game-tier-select').value = game ? String(game.performance_demand_tier) : '3';
@@ -832,23 +867,27 @@
 
   async function handleAutoFetchHLTB() {
     const titleInput = document.getElementById('game-title-input');
+    const coverInput = document.getElementById('game-cover-url-input');
     const banner = document.getElementById('hltb-status-banner');
     const btn = document.getElementById('btn-auto-fetch-hltb');
     const query = titleInput.value.trim();
 
     if (!query) {
       banner.className = 'hltb-status-banner visible warn';
-      banner.textContent = 'Please enter a game title first before clicking Auto-Fetch HLTB.';
+      banner.textContent = 'Please enter a game title first before clicking Auto-Fetch.';
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = '⏳ Querying HLTB...';
+    btn.textContent = '⏳ Querying HLTB + Cover...';
     banner.className = 'hltb-status-banner visible';
-    banner.textContent = 'Fetching session token from /api/find/init & querying HLTB / local catalog...';
+    banner.textContent = 'Fetching HLTB hours & cover art via SteamGridDB / remote catalog...';
 
     try {
       const est = await apiJSON(`/api/hltb?title=${encodeURIComponent(query)}`);
+      if (est.cover_url && coverInput) {
+        coverInput.value = est.cover_url;
+      }
       if (est.found) {
         if (est.matched_title) {
           titleInput.value = est.matched_title;
@@ -881,8 +920,69 @@
       banner.textContent = `HLTB lookup failed (${err.message}). Manual hour entry is active below.`;
     } finally {
       btn.disabled = false;
-      btn.textContent = '⚡ Auto-Fetch HLTB';
+      btn.textContent = '⚡ Auto-Fetch HLTB + Cover';
     }
+  }
+
+  async function handleFetchSGDBCoverForGame() {
+    const titleInput = document.getElementById('game-title-input');
+    const coverInput = document.getElementById('game-cover-url-input');
+    const banner = document.getElementById('hltb-status-banner');
+    const btn = document.getElementById('btn-fetch-sgdb-cover');
+    const query = titleInput.value.trim();
+
+    if (!query) {
+      banner.className = 'hltb-status-banner visible warn';
+      banner.textContent = 'Enter a game title first to fetch cover art from SteamGridDB.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Fetching Cover...';
+    try {
+      const res = await apiJSON(`/api/steamgriddb?title=${encodeURIComponent(query)}`);
+      if (res.found && res.cover_url) {
+        coverInput.value = res.cover_url;
+        banner.className = 'hltb-status-banner visible success';
+        banner.textContent = `✓ Sourced remote cover art via ${res.source.toUpperCase()}`;
+      } else {
+        banner.className = 'hltb-status-banner visible warn';
+        banner.textContent = res.has_api_key
+          ? `No cover found on SteamGridDB for "${query}".`
+          : `No cover found. Configure a SteamGridDB API key in the header to query SteamGridDB v2 grids directly!`;
+      }
+    } catch (err) {
+      banner.className = 'hltb-status-banner visible warn';
+      banner.textContent = `Cover lookup error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🖼️ Fetch SteamGridDB Cover';
+    }
+  }
+
+  // --- Modal Management: SteamGridDB Integration Modal ---
+  async function openSGDBModal() {
+    const modal = document.getElementById('modal-sgdb');
+    const banner = document.getElementById('sgdb-status-banner');
+    modal?.classList.add('open');
+    try {
+      const status = await apiJSON('/api/steamgriddb');
+      if (banner) {
+        banner.className = `hltb-status-banner visible ${status.has_api_key ? 'success' : 'warn'}`;
+        banner.textContent = status.has_api_key
+          ? '✓ SteamGridDB v2 API Key is ACTIVE. Click below to sync vertical grid covers across your library.'
+          : 'ℹ No SteamGridDB API Key saved yet (currently using remote Steam/Wikipedia CDN URLs). Paste your SteamGridDB API key below to source grids directly from SteamGridDB!';
+      }
+    } catch (err) {
+      if (banner) {
+        banner.className = 'hltb-status-banner visible warn';
+        banner.textContent = `Status check failed: ${err.message}`;
+      }
+    }
+  }
+
+  function closeSGDBModal() {
+    document.getElementById('modal-sgdb')?.classList.remove('open');
   }
 
   // --- Modal Management: Hardware Rig Modal ---
@@ -946,17 +1046,20 @@
       btn.classList.toggle('active', btn.getAttribute('data-section') === section);
     });
 
+    const secBrief = document.getElementById('section-command-brief');
     const secUtil = document.getElementById('section-utilization');
     const secRec = document.getElementById('section-recommender');
     const secLib = document.getElementById('section-library');
     const secHw = document.getElementById('section-hardware');
 
     if (section === 'all') {
+      if (secBrief) secBrief.style.display = '';
       secUtil.style.display = '';
       secRec.style.display = '';
       secLib.style.display = '';
       secHw.style.display = '';
     } else {
+      if (secBrief) secBrief.style.display = 'none';
       secUtil.style.display = section === 'recommender' ? '' : 'none';
       secRec.style.display = section === 'recommender' ? '' : 'none';
       secLib.style.display = section === 'library' ? '' : 'none';
@@ -984,8 +1087,47 @@
     document.getElementById('btn-close-device-modal')?.addEventListener('click', closeDeviceModal);
     document.getElementById('btn-cancel-device-modal')?.addEventListener('click', closeDeviceModal);
 
-    // Auto-Fetch HLTB button
+    // SteamGridDB Modal & Sync
+    document.getElementById('btn-open-sgdb-modal')?.addEventListener('click', openSGDBModal);
+    document.getElementById('btn-library-sync-sgdb')?.addEventListener('click', openSGDBModal);
+    document.getElementById('btn-close-sgdb-modal')?.addEventListener('click', closeSGDBModal);
+    document.getElementById('btn-cancel-sgdb-modal')?.addEventListener('click', closeSGDBModal);
+
+    document.getElementById('form-sgdb')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const apiKey = document.getElementById('sgdb-api-key-input')?.value.trim() || '';
+      const forceAll = Boolean(document.getElementById('sgdb-force-all-check')?.checked);
+      const btn = document.getElementById('btn-save-sync-sgdb');
+      const banner = document.getElementById('sgdb-status-banner');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Syncing Covers with SteamGridDB...';
+      }
+      try {
+        const res = await apiJSON('/api/steamgriddb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: apiKey, sync_games: true, force_all: forceAll }),
+        });
+        showToast(`SteamGridDB sync complete! Updated ${res.updated_games} game cover(s).`);
+        if (banner) {
+          banner.className = 'hltb-status-banner visible success';
+          banner.textContent = `✓ Synced! Updated ${res.updated_games} game cover(s). SteamGridDB Key Active: ${res.has_api_key ? 'Yes' : 'No'}`;
+        }
+        await loadAllData();
+      } catch (err) {
+        showToast(`SteamGridDB error: ${err.message}`);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '⚡ Save Key & Sync Library Covers';
+        }
+      }
+    });
+
+    // Auto-Fetch HLTB & SteamGridDB Cover buttons
     document.getElementById('btn-auto-fetch-hltb')?.addEventListener('click', handleAutoFetchHLTB);
+    document.getElementById('btn-fetch-sgdb-cover')?.addEventListener('click', handleFetchSGDBCoverForGame);
 
     // Preset prefill dropdown in device modal
     document.getElementById('device-preset-prefill')?.addEventListener('change', (e) => {
@@ -1001,6 +1143,7 @@
       const devVal = document.getElementById('game-device-select').value;
       const payload = {
         title: document.getElementById('game-title-input').value.trim(),
+        cover_url: document.getElementById('game-cover-url-input')?.value.trim() || '',
         primary_ecosystem: document.getElementById('game-ecosystem-select').value,
         status: document.getElementById('game-status-select').value,
         performance_demand_tier: Number(document.getElementById('game-tier-select').value) || 3,

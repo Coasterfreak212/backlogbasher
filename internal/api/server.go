@@ -43,6 +43,11 @@ func NewServer(store *db.Store, uploadDir string, staticFS fs.FS) (*Server, erro
 		staticFS:  staticFS,
 		mux:       http.NewServeMux(),
 	}
+	if !s.sgdb.HasAPIKey() {
+		if savedKey := store.GetSetting("steamgriddb_api_key"); savedKey != "" {
+			s.sgdb.SetAPIKey(savedKey)
+		}
+	}
 	s.routes()
 	return s, nil
 }
@@ -62,6 +67,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/stats", s.handleStats)
 	s.mux.HandleFunc("/api/hltb", s.handleHLTB)
 	s.mux.HandleFunc("/api/hltb/catalog", s.handleHLTBCatalog)
+	s.mux.HandleFunc("/api/steamgriddb", s.handleSteamGridDB)
 	s.mux.HandleFunc("/api/upload", s.handleUpload)
 
 	// Serve uploaded hardware photos from $UPLOAD_DIR
@@ -349,6 +355,15 @@ func (s *Server) handleGames(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "invalid JSON payload: "+err.Error())
 			return
 		}
+		if strings.TrimSpace(g.CoverURL) == "" {
+			if sgdbURL := s.sgdb.FetchFromSteamGridDB(g.Title); sgdbURL != "" {
+				g.CoverURL = sgdbURL
+			} else if defURL, ok := db.LookupDefaultCoverURL(g.Title); ok {
+				g.CoverURL = defURL
+			} else if remoteURL := s.sgdb.FetchCoverURL(g.Title); remoteURL != "" {
+				g.CoverURL = remoteURL
+			}
+		}
 		created, err := s.store.CreateGame(g)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
@@ -457,6 +472,18 @@ func (s *Server) handleGameByID(w http.ResponseWriter, r *http.Request) {
 		if v, ok := toInt(payload["release_year"]); ok {
 			existing.ReleaseYear = v
 		}
+		if v, ok := payload["cover_url"].(string); ok {
+			existing.CoverURL = strings.TrimSpace(v)
+		}
+		if existing.CoverURL == "" {
+			if sgdbURL := s.sgdb.FetchFromSteamGridDB(existing.Title); sgdbURL != "" {
+				existing.CoverURL = sgdbURL
+			} else if defURL, ok := db.LookupDefaultCoverURL(existing.Title); ok {
+				existing.CoverURL = defURL
+			} else if remoteURL := s.sgdb.FetchCoverURL(existing.Title); remoteURL != "" {
+				existing.CoverURL = remoteURL
+			}
+		}
 
 		updated, err := s.store.UpdateGame(existing)
 		if err != nil {
@@ -550,12 +577,18 @@ func (s *Server) handleHLTB(w http.ResponseWriter, r *http.Request) {
 		title = body.Title
 	}
 	est := s.hltbSvc.FetchEstimate(title)
-	if est.CoverURL == "" && s.sgdb.Enabled() {
-		lookupTitle := est.MatchedTitle
-		if lookupTitle == "" {
-			lookupTitle = title
+	lookupTitle := est.MatchedTitle
+	if lookupTitle == "" {
+		lookupTitle = title
+	}
+	if sgdbURL := s.sgdb.FetchFromSteamGridDB(lookupTitle); sgdbURL != "" {
+		est.CoverURL = sgdbURL
+	} else if est.CoverURL == "" {
+		if defURL, ok := db.LookupDefaultCoverURL(lookupTitle); ok {
+			est.CoverURL = defURL
+		} else {
+			est.CoverURL = s.sgdb.FetchCoverURL(lookupTitle)
 		}
-		est.CoverURL = s.sgdb.FetchCoverURL(lookupTitle)
 	}
 	writeJSON(w, http.StatusOK, est)
 }
@@ -566,6 +599,90 @@ func (s *Server) handleHLTBCatalog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, s.hltbSvc.Catalog())
+}
+
+// --- /api/steamgriddb ---
+
+func (s *Server) handleSteamGridDB(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		qTitle := strings.TrimSpace(r.URL.Query().Get("title"))
+		if qTitle != "" {
+			cover := s.sgdb.FetchFromSteamGridDB(qTitle)
+			source := "steamgriddb"
+			if cover == "" {
+				if defURL, ok := db.LookupDefaultCoverURL(qTitle); ok {
+					cover = defURL
+					source = "catalog_cdn"
+				} else {
+					cover = s.sgdb.FetchCoverURL(qTitle)
+					source = "steam_wikipedia_fallback"
+				}
+			}
+			writeJSON(w, http.StatusOK, map[string]any{
+				"title":           qTitle,
+				"cover_url":       cover,
+				"source":          source,
+				"has_api_key":     s.sgdb.HasAPIKey(),
+				"found":           cover != "",
+			})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"has_api_key": s.sgdb.HasAPIKey(),
+			"provider":    "SteamGridDB v2 + Steam/Wikipedia Fallback",
+		})
+
+	case http.MethodPost:
+		var body struct {
+			APIKey    string `json:"api_key"`
+			SyncGames bool   `json:"sync_games"`
+			ForceAll  bool   `json:"force_all"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON payload")
+			return
+		}
+		if strings.TrimSpace(body.APIKey) != "" {
+			s.sgdb.SetAPIKey(body.APIKey)
+			_ = s.store.SetSetting("steamgriddb_api_key", body.APIKey)
+		}
+
+		updatedCount := 0
+		if body.SyncGames {
+			games, err := s.store.ListGames()
+			if err == nil {
+				for _, g := range games {
+					isSGDB := strings.Contains(g.CoverURL, "steamgriddb.com")
+					if !body.ForceAll && g.CoverURL != "" && (!s.sgdb.HasAPIKey() || isSGDB) {
+						continue
+					}
+					newCover := s.sgdb.FetchFromSteamGridDB(g.Title)
+					if newCover == "" && g.CoverURL == "" {
+						if defURL, ok := db.LookupDefaultCoverURL(g.Title); ok {
+							newCover = defURL
+						} else {
+							newCover = s.sgdb.FetchCoverURL(g.Title)
+						}
+					}
+					if newCover != "" && newCover != g.CoverURL {
+						g.CoverURL = newCover
+						if _, err := s.store.UpdateGame(g); err == nil {
+							updatedCount++
+						}
+					}
+				}
+			}
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"has_api_key":   s.sgdb.HasAPIKey(),
+			"updated_games": updatedCount,
+		})
+
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
 }
 
 // --- Helpers ---

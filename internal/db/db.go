@@ -83,6 +83,10 @@ func (s *Store) migrate() error {
 			cover_url TEXT NOT NULL DEFAULT '',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL DEFAULT ''
+		);`,
 	}
 
 	for _, q := range stmts {
@@ -92,7 +96,50 @@ func (s *Store) migrate() error {
 	}
 	// Safe migration for existing databases without cover_url
 	_, _ = s.db.Exec(`ALTER TABLE games ADD COLUMN cover_url TEXT NOT NULL DEFAULT ''`)
+	s.backfillSeededCoverURLs()
+	s.backfillHardwarePhotoURLs()
 	return nil
+}
+
+func (s *Store) GetSetting(key string) string {
+	var val string
+	_ = s.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, key).Scan(&val)
+	return strings.TrimSpace(val)
+}
+
+func (s *Store) SetSetting(key, value string) error {
+	_, err := s.db.Exec(`
+		INSERT INTO settings (key, value) VALUES (?, ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value
+	`, key, strings.TrimSpace(value))
+	return err
+}
+
+func (s *Store) backfillSeededCoverURLs() {
+	defaults := DefaultGameCoverURLs()
+	for title, url := range defaults {
+		_, _ = s.db.Exec(`
+			UPDATE games
+			SET cover_url = ?
+			WHERE LOWER(title) = LOWER(?)
+			  AND (cover_url = '' OR cover_url IS NULL OR cover_url LIKE '/assets/%')
+		`, url, title)
+	}
+}
+
+func (s *Store) backfillHardwarePhotoURLs() {
+	devices, err := s.ListDevices()
+	if err != nil {
+		return
+	}
+	for _, d := range devices {
+		if d.PhotoURL == "" || strings.HasPrefix(d.PhotoURL, "/assets/") {
+			newURL := LookupDefaultHardwarePhotoURL(d.Name, d.PresetID)
+			if newURL != "" {
+				_, _ = s.db.Exec(`UPDATE devices SET photo_url = ? WHERE id = ?`, newURL, d.ID)
+			}
+		}
+	}
 }
 
 // --- Device CRUD ---
@@ -173,8 +220,8 @@ func (s *Store) CreateDevice(d models.Device) (models.Device, error) {
 	if len(d.Ecosystems) == 0 {
 		d.Ecosystems = []string{"Steam"}
 	}
-	if d.PhotoURL == "" {
-		d.PhotoURL = "/assets/rig-custom.svg"
+	if d.PhotoURL == "" || strings.HasPrefix(d.PhotoURL, "/assets/") {
+		d.PhotoURL = LookupDefaultHardwarePhotoURL(d.Name, d.PresetID)
 	}
 	ecoBytes, _ := json.Marshal(d.Ecosystems)
 	isPreset := 0
@@ -269,7 +316,7 @@ func (s *Store) ListGames() ([]models.Game, error) {
 	rows, err := s.db.Query(`
 		SELECT id, title, primary_ecosystem, status, performance_demand_tier,
 		       hltb_main, hltb_extras, hltb_completionist, hours_logged,
-		       primary_device_id, genre, release_year, created_at
+		       primary_device_id, genre, release_year, cover_url, created_at
 		FROM games
 		ORDER BY
 			CASE status
@@ -292,7 +339,7 @@ func (s *Store) ListGames() ([]models.Game, error) {
 		if err := rows.Scan(
 			&g.ID, &g.Title, &g.PrimaryEcosystem, &g.Status, &g.PerformanceDemandTier,
 			&g.HLTBMain, &g.HLTBExtras, &g.HLTBCompletionist, &g.HoursLogged,
-			&devID, &g.Genre, &g.ReleaseYear, &g.CreatedAt,
+			&devID, &g.Genre, &g.ReleaseYear, &g.CoverURL, &g.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -325,12 +372,12 @@ func (s *Store) GetGame(id int64) (models.Game, error) {
 	err = s.db.QueryRow(`
 		SELECT id, title, primary_ecosystem, status, performance_demand_tier,
 		       hltb_main, hltb_extras, hltb_completionist, hours_logged,
-		       primary_device_id, genre, release_year, created_at
+		       primary_device_id, genre, release_year, cover_url, created_at
 		FROM games WHERE id = ?
 	`, id).Scan(
 		&g.ID, &g.Title, &g.PrimaryEcosystem, &g.Status, &g.PerformanceDemandTier,
 		&g.HLTBMain, &g.HLTBExtras, &g.HLTBCompletionist, &g.HoursLogged,
-		&devID, &g.Genre, &g.ReleaseYear, &g.CreatedAt,
+		&devID, &g.Genre, &g.ReleaseYear, &g.CoverURL, &g.CreatedAt,
 	)
 	if err != nil {
 		return models.Game{}, err
@@ -365,6 +412,12 @@ func (s *Store) CreateGame(g models.Game) (models.Game, error) {
 	}
 	g.Status = normalizeStatus(g.Status)
 	g.PerformanceDemandTier = clampTier(g.PerformanceDemandTier)
+	g.CoverURL = strings.TrimSpace(g.CoverURL)
+	if g.CoverURL == "" {
+		if defURL, ok := LookupDefaultCoverURL(g.Title); ok {
+			g.CoverURL = defURL
+		}
+	}
 
 	var devID any = nil
 	if g.PrimaryDeviceID != nil && *g.PrimaryDeviceID > 0 {
@@ -375,11 +428,11 @@ func (s *Store) CreateGame(g models.Game) (models.Game, error) {
 		INSERT INTO games (
 			title, primary_ecosystem, status, performance_demand_tier,
 			hltb_main, hltb_extras, hltb_completionist, hours_logged,
-			primary_device_id, genre, release_year
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			primary_device_id, genre, release_year, cover_url
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, g.Title, g.PrimaryEcosystem, g.Status, g.PerformanceDemandTier,
 		g.HLTBMain, g.HLTBExtras, g.HLTBCompletionist, g.HoursLogged,
-		devID, g.Genre, g.ReleaseYear,
+		devID, g.Genre, g.ReleaseYear, g.CoverURL,
 	)
 	if err != nil {
 		return models.Game{}, err
@@ -401,6 +454,7 @@ func (s *Store) UpdateGame(g models.Game) (models.Game, error) {
 	}
 	g.Status = normalizeStatus(g.Status)
 	g.PerformanceDemandTier = clampTier(g.PerformanceDemandTier)
+	g.CoverURL = strings.TrimSpace(g.CoverURL)
 
 	var devID any = nil
 	if g.PrimaryDeviceID != nil && *g.PrimaryDeviceID > 0 {
@@ -411,11 +465,11 @@ func (s *Store) UpdateGame(g models.Game) (models.Game, error) {
 		UPDATE games
 		SET title = ?, primary_ecosystem = ?, status = ?, performance_demand_tier = ?,
 		    hltb_main = ?, hltb_extras = ?, hltb_completionist = ?, hours_logged = ?,
-		    primary_device_id = ?, genre = ?, release_year = ?
+		    primary_device_id = ?, genre = ?, release_year = ?, cover_url = ?
 		WHERE id = ?
 	`, g.Title, g.PrimaryEcosystem, g.Status, g.PerformanceDemandTier,
 		g.HLTBMain, g.HLTBExtras, g.HLTBCompletionist, g.HoursLogged,
-		devID, g.Genre, g.ReleaseYear, g.ID,
+		devID, g.Genre, g.ReleaseYear, g.CoverURL, g.ID,
 	)
 	if err != nil {
 		return models.Game{}, err

@@ -25,6 +25,7 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="btn-open-sgdb-modal" class="btn btn-cyan" type="button" title="Configure SteamGridDB API Key or sync cover art across your game library">🖼️ SteamGridDB Cover Art</button>
         <button id="btn-open-add-device" class="btn" type="button">+ Register Hardware Rig</button>
         <button id="btn-open-add-game" class="btn btn-primary" type="button">+ Add Game to Library</button>
       </div>
@@ -160,7 +161,10 @@
           <h2 id="heading-library" class="section-title">Spec-Aware Cross-Play Game Library</h2>
           <p class="section-desc">Dynamic compatibility badges compare each game's Performance Demand Tier (1–5) against every owned rig sharing its ecosystem.</p>
         </div>
-        <button id="btn-section-add-game" class="btn btn-primary" type="button">+ Add Game</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="btn-library-sync-sgdb" class="btn btn-cyan" type="button">🖼️ Sync Cover Art (SteamGridDB)</button>
+          <button id="btn-section-add-game" class="btn btn-primary" type="button">+ Add Game</button>
+        </div>
       </div>
       <div class="section-body">
         <div class="library-toolbar">
@@ -212,7 +216,7 @@
         <div class="section-title-group">
           <span class="section-eyebrow">ASSET INVENTORY // PRESET CATALOG + CUSTOM BUILDS &amp; HANDHELDS</span>
           <h2 id="heading-hardware" class="section-title">Hardware Asset Registry</h2>
-          <p class="section-desc">Register standard consoles from the built-in preset database or configure custom handhelds and living-room PCs with local photo uploads.</p>
+          <p class="section-desc">Register standard consoles from the built-in preset database (with Wikimedia Commons hardware photography) or configure custom handhelds and living-room PCs.</p>
         </div>
         <button id="btn-section-add-device" class="btn btn-primary" type="button">+ Add Custom Build / Handheld</button>
       </div>
@@ -221,8 +225,8 @@
         <div class="preset-strip">
           <div class="preset-strip-header">
             <div>
-              <span class="section-eyebrow">BUILT-IN HARDWARE PRESET CATALOG (6 STANDARD CONSOLES / HANDHELDS)</span>
-              <div class="section-desc">One-click deploy a standard console preset or pre-fill the custom rig builder.</div>
+              <span class="section-eyebrow">BUILT-IN HARDWARE PRESET CATALOG (31 GENERATIONAL CONSOLES &amp; HANDHELDS)</span>
+              <div class="section-desc">One-click deploy a standard console preset (Atari 2600 through PS5, Switch, Series X, Steam Deck OLED, ROG Ally X) or pre-fill the custom rig builder.</div>
             </div>
           </div>
           <div id="preset-catalog-grid" class="preset-cards-row"></div>
@@ -234,7 +238,7 @@
     </section>
   </main>
 
-  <!-- MODAL 1: Add / Edit Game (with Auto-Fetch HLTB) -->
+  <!-- MODAL 1: Add / Edit Game (with Auto-Fetch HLTB & SteamGridDB Cover Art) -->
   <div id="modal-game" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-game-title">
     <div class="modal-dialog">
       <div class="modal-header">
@@ -249,9 +253,17 @@
             <div class="hltb-fetch-row">
               <input id="game-title-input" name="title" type="text" class="input-field" list="hltb-catalog-datalist" placeholder="e.g., Baldur's Gate 3, Celeste, Hollow Knight..." required />
               <datalist id="hltb-catalog-datalist"></datalist>
-              <button id="btn-auto-fetch-hltb" type="button" class="btn btn-cyan">⚡ Auto-Fetch HLTB</button>
+              <button id="btn-auto-fetch-hltb" type="button" class="btn btn-cyan">⚡ Auto-Fetch HLTB + Cover</button>
             </div>
             <div id="hltb-status-banner" class="hltb-status-banner"></div>
+          </div>
+
+          <div class="form-group full">
+            <label for="game-cover-url-input" class="form-label">Cover Art URL (SteamGridDB / Remote Image URL)</label>
+            <div class="hltb-fetch-row">
+              <input id="game-cover-url-input" name="cover_url" type="url" class="input-field" placeholder="Auto-sourced via SteamGridDB or paste remote cover URL..." />
+              <button id="btn-fetch-sgdb-cover" type="button" class="btn">🖼️ Fetch SteamGridDB Cover</button>
+            </div>
           </div>
 
           <div class="form-grid">
@@ -404,12 +416,47 @@
               <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Emulation" /> Emulation</label>
               <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Android" /> Android</label>
               <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="PlayStation" /> PlayStation</label>
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Retro" /> Retro</label>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button id="btn-cancel-device-modal" type="button" class="btn">Cancel</button>
           <button id="btn-save-device" type="submit" class="btn btn-primary">Save Hardware Asset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: SteamGridDB Cover Art Integration & Library Sync -->
+  <div id="modal-sgdb" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-sgdb-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-sgdb-title" class="modal-title">SteamGridDB Cover Art Integration</h3>
+        <button id="btn-close-sgdb-modal" class="modal-close" type="button" aria-label="Close modal">&times;</button>
+      </div>
+      <form id="form-sgdb">
+        <div class="modal-body">
+          <p class="section-desc" style="margin-bottom: 12px;">
+            Source official vertical game grid artwork directly from <strong>SteamGridDB v2</strong> (<code>https://www.steamgriddb.com/api/v2</code>) without downloading files locally. You can set <code>STEAMGRIDDB_API_KEY</code> in your environment or save your API key below (persisted in SQLite).
+          </p>
+          <div id="sgdb-status-banner" class="hltb-status-banner visible" style="margin-bottom: 14px;">
+            Checking SteamGridDB configuration...
+          </div>
+          <div class="form-group full">
+            <label for="sgdb-api-key-input" class="form-label">SteamGridDB API Key (From steamgriddb.com/profile/preferences/api)</label>
+            <input id="sgdb-api-key-input" type="password" class="input-field" placeholder="Paste your SteamGridDB Bearer API Key (optional if already set)..." />
+          </div>
+          <div class="form-group full" style="margin-top: 12px;">
+            <label class="checkbox-pill" style="display:inline-flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="sgdb-force-all-check" checked />
+              Overwrite all library covers with SteamGridDB grids (uncheck to only fill missing covers)
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-sgdb-modal" type="button" class="btn">Close</button>
+          <button id="btn-save-sync-sgdb" type="submit" class="btn btn-primary">⚡ Save Key &amp; Sync Library Covers</button>
         </div>
       </form>
     </div>
