@@ -1103,10 +1103,165 @@
   }
 
   // --- Modal Management: Game Modal & Auto-Fetch HLTB + SteamGridDB ---
+  let hltbSuggestTimer = null;
+
+  function closeHLTBSuggestDropdown() {
+    const dd = document.getElementById('hltb-suggest-dropdown');
+    if (dd) {
+      dd.classList.remove('open');
+      dd.innerHTML = '';
+    }
+  }
+
+  function applyHLTBEstimateToForm(est) {
+    const titleInput = document.getElementById('game-title-input');
+    const coverInput = document.getElementById('game-cover-url-input');
+    const banner = document.getElementById('hltb-status-banner');
+
+    if (est.matched_title && titleInput) {
+      titleInput.value = est.matched_title;
+    }
+    if (est.cover_url && coverInput) {
+      coverInput.value = est.cover_url;
+    }
+    if (est.main_story !== undefined) {
+      document.getElementById('game-hltb-main').value = String(est.main_story);
+    }
+    if (est.main_extras !== undefined) {
+      document.getElementById('game-hltb-extras').value = String(est.main_extras);
+    }
+    if (est.completionist !== undefined) {
+      document.getElementById('game-hltb-comp').value = String(est.completionist);
+    }
+    if (est.suggested_demand_tier) {
+      document.getElementById('game-tier-select').value = String(est.suggested_demand_tier);
+    }
+    if (est.suggested_ecosystem) {
+      document.getElementById('game-ecosystem-select').value = est.suggested_ecosystem;
+    }
+    if (est.genre) {
+      document.getElementById('game-genre-input').value = est.genre;
+    }
+    if (est.release_year) {
+      document.getElementById('game-year-input').value = String(est.release_year);
+    }
+
+    if (banner) {
+      banner.className = 'hltb-status-banner visible success';
+      const srcLabel = est.source === 'hltb_live' ? 'LIVE HLTB' : 'HLTB CATALOG';
+      banner.textContent = `✓ [${srcLabel}] Auto-filled "${est.matched_title || est.query}" (Main: ${est.main_story}h • +Extras: ${est.main_extras}h • 100%: ${est.completionist}h)`;
+    }
+
+    closeHLTBSuggestDropdown();
+
+    // If cover art wasn't included yet in the quick search item, fetch it in the background
+    if (!est.cover_url && est.matched_title && coverInput && !coverInput.value.trim()) {
+      apiJSON(`/api/steamgriddb?title=${encodeURIComponent(est.matched_title)}`)
+        .then((res) => {
+          if (res.found && res.cover_url && !coverInput.value.trim()) {
+            coverInput.value = res.cover_url;
+          }
+        })
+        .catch(() => {});
+    }
+  }
+
+  async function triggerHLTBSuggest(query) {
+    const dd = document.getElementById('hltb-suggest-dropdown');
+    if (!dd) return;
+
+    const clean = (query || '').trim();
+    if (clean.length < 2) {
+      closeHLTBSuggestDropdown();
+      return;
+    }
+
+    try {
+      const matches = await apiJSON(`/api/hltb/search?q=${encodeURIComponent(clean)}`);
+      // Ensure input still matches or is focused
+      const currentVal = document.getElementById('game-title-input')?.value.trim() || '';
+      if (currentVal.length < 2) {
+        closeHLTBSuggestDropdown();
+        return;
+      }
+
+      if (!Array.isArray(matches) || matches.length === 0) {
+        dd.innerHTML = `
+          <div class="hltb-suggest-header">
+            <span>HLTB Autosuggest</span>
+            <span>0 matches</span>
+          </div>
+          <div style="padding:10px 12px;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-secondary);">
+            No instant HLTB matches for "${escapeHTML(clean)}". Click <strong>⚡ Auto-Fetch HLTB + Cover</strong> or enter hours manually below.
+          </div>
+        `;
+        dd.classList.add('open');
+        return;
+      }
+
+      dd.innerHTML =
+        `<div class="hltb-suggest-header">
+          <span>HowLongToBeat Autosuggest (${matches.length} found)</span>
+          <span>Click to Auto-Fill</span>
+        </div>` +
+        matches
+          .map((m, idx) => {
+            const subParts = [
+              m.source === 'hltb_live' ? 'Live HLTB' : 'Seeded HLTB',
+              m.suggested_ecosystem || '',
+              m.genre || '',
+              m.release_year ? String(m.release_year) : '',
+            ].filter(Boolean);
+            const thumb = m.cover_url
+              ? `<img src="${escapeHTML(m.cover_url)}" alt="" class="hltb-suggest-thumb" loading="lazy" />`
+              : `<div class="hltb-suggest-thumb" style="display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--text-muted);">🎮</div>`;
+            return `
+              <div class="hltb-suggest-item" role="option" tabindex="0" data-hltb-idx="${idx}">
+                <div class="hltb-suggest-main">
+                  ${thumb}
+                  <div style="min-width:0;">
+                    <div class="hltb-suggest-title">${escapeHTML(m.matched_title)}</div>
+                    <div class="hltb-suggest-sub">${escapeHTML(subParts.join(' • '))}</div>
+                  </div>
+                </div>
+                <div class="hltb-suggest-hours">
+                  <span class="hltb-suggest-pill">Main <strong>${m.main_story}h</strong></span>
+                  <span class="hltb-suggest-pill">+Extra <strong>${m.main_extras}h</strong></span>
+                  <span class="hltb-suggest-pill">100% <strong>${m.completionist}h</strong></span>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+      dd.classList.add('open');
+
+      dd.querySelectorAll('[data-hltb-idx]').forEach((itemEl) => {
+        const selectHandler = () => {
+          const idx = Number(itemEl.getAttribute('data-hltb-idx'));
+          const chosen = matches[idx];
+          if (chosen) {
+            applyHLTBEstimateToForm(chosen);
+          }
+        };
+        itemEl.addEventListener('click', selectHandler);
+        itemEl.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            selectHandler();
+          }
+        });
+      });
+    } catch (_) {
+      closeHLTBSuggestDropdown();
+    }
+  }
+
   function openGameModal(game = null) {
     const modal = document.getElementById('modal-game');
     const titleEl = document.getElementById('modal-game-title');
     const banner = document.getElementById('hltb-status-banner');
+    closeHLTBSuggestDropdown();
     if (banner) {
       banner.className = 'hltb-status-banner';
       banner.textContent = '';
@@ -1134,6 +1289,7 @@
   }
 
   function closeGameModal() {
+    closeHLTBSuggestDropdown();
     document.getElementById('modal-game')?.classList.remove('open');
   }
 
@@ -1143,6 +1299,8 @@
     const banner = document.getElementById('hltb-status-banner');
     const btn = document.getElementById('btn-auto-fetch-hltb');
     const query = titleInput.value.trim();
+
+    closeHLTBSuggestDropdown();
 
     if (!query) {
       banner.className = 'hltb-status-banner visible warn';
@@ -1161,27 +1319,7 @@
         coverInput.value = est.cover_url;
       }
       if (est.found) {
-        if (est.matched_title) {
-          titleInput.value = est.matched_title;
-        }
-        document.getElementById('game-hltb-main').value = String(est.main_story);
-        document.getElementById('game-hltb-extras').value = String(est.main_extras);
-        document.getElementById('game-hltb-comp').value = String(est.completionist);
-        if (est.suggested_demand_tier) {
-          document.getElementById('game-tier-select').value = String(est.suggested_demand_tier);
-        }
-        if (est.suggested_ecosystem) {
-          document.getElementById('game-ecosystem-select').value = est.suggested_ecosystem;
-        }
-        if (est.genre) {
-          document.getElementById('game-genre-input').value = est.genre;
-        }
-        if (est.release_year) {
-          document.getElementById('game-year-input').value = String(est.release_year);
-        }
-
-        banner.className = 'hltb-status-banner visible success';
-        banner.textContent = `✓ [${est.source.toUpperCase()}] ${est.message} (Main: ${est.main_story}h • +Extras: ${est.main_extras}h • 100%: ${est.completionist}h)`;
+        applyHLTBEstimateToForm(est);
       } else {
         banner.className = 'hltb-status-banner visible warn';
         banner.textContent = `⚠ ${est.message}`;
@@ -1390,6 +1528,42 @@
         toggleBtn.textContent = state.filters.presetsCollapsed ? 'Show Preset Catalog ▼' : 'Hide Preset Catalog ▲';
       }
       renderPresetsAndHardware();
+    });
+
+    // Live HLTB Typeahead Autosuggest on Game Title Input
+    const gameTitleInput = document.getElementById('game-title-input');
+    if (gameTitleInput) {
+      gameTitleInput.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (hltbSuggestTimer) clearTimeout(hltbSuggestTimer);
+        if (!val || val.trim().length < 2) {
+          closeHLTBSuggestDropdown();
+          return;
+        }
+        hltbSuggestTimer = setTimeout(() => {
+          triggerHLTBSuggest(val);
+        }, 220);
+      });
+
+      gameTitleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeHLTBSuggestDropdown();
+        } else if (e.key === 'ArrowDown') {
+          const firstItem = document.querySelector('#hltb-suggest-dropdown [data-hltb-idx="0"]');
+          if (firstItem) {
+            e.preventDefault();
+            firstItem.focus();
+          }
+        }
+      });
+    }
+
+    // Close HLTB suggest dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const wrap = document.querySelector('.hltb-autocomplete-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        closeHLTBSuggestDropdown();
+      }
     });
 
     // Open Modals

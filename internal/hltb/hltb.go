@@ -115,11 +115,137 @@ func (s *Service) FetchEstimate(title string) models.HLTBEstimate {
 	}
 }
 
+// SearchEstimates returns up to `limit` matching HLTB estimates for live typeahead autosuggest,
+// combining live HowLongToBeat search results with local catalog matches.
+func (s *Service) SearchEstimates(query string, limit int) []models.HLTBEstimate {
+	clean := strings.TrimSpace(query)
+	if clean == "" {
+		return []models.HLTBEstimate{}
+	}
+	if limit <= 0 || limit > 15 {
+		limit = 8
+	}
+
+	seen := make(map[string]bool)
+	var results []models.HLTBEstimate
+
+	// 1. Try live HLTB search (up to limit items)
+	if liveMatches, err := s.queryLiveHLTBList(clean, limit); err == nil {
+		for _, m := range liveMatches {
+			key := normalizeTitle(m.MatchedTitle)
+			if key == "" || seen[key] {
+				continue
+			}
+			// Enrich with local catalog metadata if known
+			if local, ok := s.searchLocalCatalog(m.MatchedTitle); ok && normalizeTitle(local.Title) == key {
+				m.SuggestedDemandTier = local.DemandTier
+				m.SuggestedEcosystem = local.Ecosystem
+				m.Genre = local.Genre
+				if m.ReleaseYear == 0 {
+					m.ReleaseYear = local.ReleaseYear
+				}
+			}
+			seen[key] = true
+			results = append(results, m)
+			if len(results) >= limit {
+				return results
+			}
+		}
+	}
+
+	// 2. Supplement with ranked local seeded catalog matches
+	normQuery := normalizeTitle(clean)
+	queryWords := strings.Fields(normQuery)
+
+	type scoredEntry struct {
+		entry CatalogEntry
+		score int
+	}
+	var scored []scoredEntry
+	for _, entry := range s.catalog {
+		normEntry := normalizeTitle(entry.Title)
+		if seen[normEntry] {
+			continue
+		}
+		score := 0
+		if normEntry == normQuery {
+			score += 100
+		} else if strings.HasPrefix(normEntry, normQuery) {
+			score += 60
+		} else if strings.Contains(normEntry, normQuery) {
+			score += 35
+		}
+
+		entryWords := strings.Fields(normEntry)
+		for _, qw := range queryWords {
+			if len(qw) < 2 {
+				continue
+			}
+			for _, ew := range entryWords {
+				if ew == qw {
+					score += 20
+				} else if strings.HasPrefix(ew, qw) {
+					score += 10
+				}
+			}
+		}
+		if score > 0 {
+			scored = append(scored, scoredEntry{entry: entry, score: score})
+		}
+	}
+
+	// Simple selection sort for top matches
+	for i := 0; i < len(scored); i++ {
+		for j := i + 1; j < len(scored); j++ {
+			if scored[j].score > scored[i].score {
+				scored[i], scored[j] = scored[j], scored[i]
+			}
+		}
+	}
+
+	for _, item := range scored {
+		if len(results) >= limit {
+			break
+		}
+		e := item.entry
+		results = append(results, models.HLTBEstimate{
+			Query:               clean,
+			MatchedTitle:        e.Title,
+			MainStory:           e.MainStory,
+			MainExtras:          e.MainExtras,
+			Completionist:       e.Completionist,
+			SuggestedDemandTier: e.DemandTier,
+			SuggestedEcosystem:  e.Ecosystem,
+			Genre:               e.Genre,
+			ReleaseYear:         e.ReleaseYear,
+			Source:              "local_catalog",
+			Found:               true,
+			Message:             fmt.Sprintf("Matched \"%s\" via local HLTB catalog.", e.Title),
+		})
+	}
+
+	return results
+}
+
 func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
+	list, err := s.queryLiveHLTBList(title, 5)
+	if err != nil || len(list) == 0 {
+		if err != nil {
+			return models.HLTBEstimate{}, err
+		}
+		return models.HLTBEstimate{}, fmt.Errorf("hltb find returned no matches")
+	}
+	return list[0], nil
+}
+
+func (s *Service) queryLiveHLTBList(title string, size int) ([]models.HLTBEstimate, error) {
+	if size <= 0 {
+		size = 5
+	}
 	initURL := fmt.Sprintf("https://howlongtobeat.com/api/search/site/init?t=%d", time.Now().UnixMilli())
 	req, err := http.NewRequest(http.MethodGet, initURL, nil)
 	if err != nil {
-		return models.HLTBEstimate{}, err
+		return nil, err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
 	req.Header.Set("Referer", "https://howlongtobeat.com/")
@@ -128,17 +254,17 @@ func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return models.HLTBEstimate{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return models.HLTBEstimate{}, fmt.Errorf("hltb init returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("hltb init returned status %d", resp.StatusCode)
 	}
 
 	var initData hltbInitResponse
 	if err := json.NewDecoder(resp.Body).Decode(&initData); err != nil || initData.Token == "" {
-		return models.HLTBEstimate{}, fmt.Errorf("hltb init token parse failed")
+		return nil, fmt.Errorf("hltb init token parse failed")
 	}
 
 	terms := strings.Fields(title)
@@ -146,7 +272,7 @@ func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
 		"searchType":  "games",
 		"searchTerms": terms,
 		"searchPage":  1,
-		"size":        5,
+		"size":        size,
 		"searchOptions": map[string]any{
 			"games": map[string]any{
 				"userId":        0,
@@ -169,12 +295,12 @@ func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
 
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return models.HLTBEstimate{}, err
+		return nil, err
 	}
 
 	findReq, err := http.NewRequest(http.MethodPost, "https://howlongtobeat.com/api/search/site", bytes.NewReader(bodyBytes))
 	if err != nil {
-		return models.HLTBEstimate{}, err
+		return nil, err
 	}
 	findReq.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
 	findReq.Header.Set("Referer", "https://howlongtobeat.com/")
@@ -184,36 +310,39 @@ func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
 
 	findResp, err := s.client.Do(findReq)
 	if err != nil {
-		return models.HLTBEstimate{}, err
+		return nil, err
 	}
 	defer findResp.Body.Close()
 
 	if findResp.StatusCode != http.StatusOK {
-		return models.HLTBEstimate{}, fmt.Errorf("hltb find returned status %d", findResp.StatusCode)
+		return nil, fmt.Errorf("hltb find returned status %d", findResp.StatusCode)
 	}
 
 	var result hltbFindResponse
 	if err := json.NewDecoder(findResp.Body).Decode(&result); err != nil || len(result.Data) == 0 {
-		return models.HLTBEstimate{}, fmt.Errorf("hltb find returned no matches")
+		return nil, fmt.Errorf("hltb find returned no matches")
 	}
 
-	top := result.Data[0]
 	roundHalf := func(sec float64) float64 {
 		hrs := sec / 3600.0
 		return math.Round(hrs*2) / 2
 	}
 
-	return models.HLTBEstimate{
-		Query:         title,
-		MatchedTitle:  top.GameName,
-		MainStory:     roundHalf(top.CompMain),
-		MainExtras:    roundHalf(top.CompPlus),
-		Completionist: roundHalf(top.Comp100),
-		ReleaseYear:   top.ReleaseWorld,
-		Source:        "hltb_live",
-		Found:         true,
-		Message:       fmt.Sprintf("Fetched live from HowLongToBeat API (%s).", top.GameName),
-	}, nil
+	var out []models.HLTBEstimate
+	for _, item := range result.Data {
+		out = append(out, models.HLTBEstimate{
+			Query:         title,
+			MatchedTitle:  item.GameName,
+			MainStory:     roundHalf(item.CompMain),
+			MainExtras:    roundHalf(item.CompPlus),
+			Completionist: roundHalf(item.Comp100),
+			ReleaseYear:   item.ReleaseWorld,
+			Source:        "hltb_live",
+			Found:         true,
+			Message:       fmt.Sprintf("Fetched live from HowLongToBeat API (%s).", item.GameName),
+		})
+	}
+	return out, nil
 }
 
 func normalizeTitle(s string) string {

@@ -274,11 +274,13 @@
       <form id="form-game">
         <input type="hidden" id="game-id-input" value="" />
         <div class="modal-body">
-          <div class="form-group full">
-            <label for="game-title-input" class="form-label">Game Title *</label>
+          <div class="form-group full" style="position:relative;">
+            <label for="game-title-input" class="form-label">Game Title * <span style="font-weight:400;color:var(--text-muted);text-transform:none;">(Type to search HLTB &amp; click a suggestion to auto-fill)</span></label>
             <div class="hltb-fetch-row">
-              <input id="game-title-input" name="title" type="text" class="input-field" list="hltb-catalog-datalist" placeholder="e.g., Baldur's Gate 3, Celeste, Hollow Knight..." required />
-              <datalist id="hltb-catalog-datalist"></datalist>
+              <div class="hltb-autocomplete-wrap">
+                <input id="game-title-input" name="title" type="text" class="input-field" autocomplete="off" placeholder="Search HowLongToBeat (e.g., Baldur's Gate 3, Celeste, Hollow Knight)..." required />
+                <div id="hltb-suggest-dropdown" class="hltb-suggest-dropdown" role="listbox" aria-label="HLTB Game Suggestions"></div>
+              </div>
               <button id="btn-auto-fetch-hltb" type="button" class="btn btn-cyan">⚡ Auto-Fetch HLTB + Cover</button>
             </div>
             <div id="hltb-status-banner" class="hltb-status-banner"></div>
