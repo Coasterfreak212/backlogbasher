@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BacklogBasher — Self-Hosted Home Gaming ERP &amp; Spec-Aware Cross-Play Registry</title>
+  <meta name="description" content="Single-tenant, self-hosted Home Gaming ERP web application for hardware asset registry, spec-aware cross-play compatibility, HLTB time estimates, and backlog optimization." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Industrial Command Header -->
+  <header class="erp-header">
+    <div class="erp-header-inner">
+      <div class="brand-cluster">
+        <div class="brand-mark" aria-hidden="true">BB</div>
+        <div class="brand-title-wrap">
+          <h1>
+            BacklogBasher
+            <span class="instance-tag">HOME GAMING ERP // SELF-HOSTED</span>
+          </h1>
+          <div class="brand-subtitle">Spec-Aware Hardware Asset Registry • Cross-Play Compatibility Engine • HLTB Telemetry</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-open-add-device" class="btn" type="button">+ Register Hardware Rig</button>
+        <button id="btn-open-add-game" class="btn btn-primary" type="button">+ Add Game to Library</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation & Live Fleet KPI Strip -->
+  <nav class="nav-bar" aria-label="ERP Workspace Sections">
+    <div class="nav-bar-inner">
+      <div class="nav-tabs">
+        <button id="tab-all" class="nav-tab active" data-section="all" type="button">
+          Command Overview
+        </button>
+        <button id="tab-recommender" class="nav-tab" data-section="recommender" type="button">
+          Next-Game Recommender
+        </button>
+        <button id="tab-library" class="nav-tab" data-section="library" type="button">
+          Cross-Play Library <span id="nav-game-count" class="nav-count">0</span>
+        </button>
+        <button id="tab-hardware" class="nav-tab" data-section="hardware" type="button">
+          Hardware Asset Registry <span id="nav-device-count" class="nav-count">0</span>
+        </button>
+      </div>
+
+      <div class="kpi-strip" id="global-kpi-strip">
+        <div class="kpi-pill">
+          <span class="kpi-pill-label">Fleet Hours:</span>
+          <span id="kpi-total-hours" class="kpi-pill-val amber">0.0h</span>
+        </div>
+        <div class="kpi-pill">
+          <span class="kpi-pill-label">Active Playing:</span>
+          <span id="kpi-playing-count" class="kpi-pill-val emerald">0</span>
+        </div>
+        <div class="kpi-pill">
+          <span class="kpi-pill-label">Backlog Debt:</span>
+          <span id="kpi-backlog-hours" class="kpi-pill-val cyan">0.0h</span>
+        </div>
+        <div class="kpi-pill">
+          <span class="kpi-pill-label">Cleared:</span>
+          <span id="kpi-completion-rate" class="kpi-pill-val">0%</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main ERP Workspace -->
+  <main class="erp-main">
+    <!-- SECTION 1: Console Love / Utilization Summary -->
+    <section id="section-utilization" class="erp-section" aria-labelledby="heading-utilization">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-eyebrow">TELEMETRY // HARDWARE UTILIZATION &amp; NEGLECT DETECTOR</span>
+          <h2 id="heading-utilization" class="section-title">Console Love &amp; Fleet Utilization Breakdown</h2>
+          <p class="section-desc">Track total hours logged and active backlog queue per rig to spot neglected hardware at a glance.</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="fleet-bar-container">
+          <div class="fleet-bar-header">
+            <span>FLEET PLAYTIME DISTRIBUTION (HOURS LOGGED SHARE)</span>
+            <span id="fleet-bar-summary-text">0.0h across 0 rigs</span>
+          </div>
+          <div id="fleet-stacked-bar" class="fleet-stacked-bar" role="img" aria-label="Playtime share across owned consoles"></div>
+          <div id="fleet-legend" class="fleet-legend"></div>
+        </div>
+        <div id="utilization-grid" class="utilization-grid"></div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Next-Game Recommender -->
+    <section id="section-recommender" class="erp-section" aria-labelledby="heading-recommender">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-eyebrow">DECISION ENGINE // SPEC-AWARE BACKLOG DISPATCH</span>
+          <h2 id="heading-recommender" class="section-title">Next-Game Recommender</h2>
+          <p class="section-desc">Filter your Backlog by Device in Hand, Available Time Budget, and Minimum Performance Match to surface the Top 3 matches.</p>
+        </div>
+        <div>
+          <span id="rec-eligible-badge" class="instance-tag">0 ELIGIBLE IN BACKLOG</span>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="recommender-controls">
+          <div class="control-group">
+            <label for="rec-device-select" class="control-label">1. Device in Hand</label>
+            <select id="rec-device-select" class="select-field">
+              <option value="0">Any Owned Rig (Auto-Match Best Hardware)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">2. Available Time Budget (HLTB Main)</span>
+            <div class="segmented-group" id="rec-time-group" role="group" aria-label="Available Time Budget">
+              <button type="button" class="seg-btn active" data-budget="any">Any</button>
+              <button type="button" class="seg-btn" data-budget="<5h">&lt;5h</button>
+              <button type="button" class="seg-btn" data-budget="5-15h">5–15h</button>
+              <button type="button" class="seg-btn" data-budget="15-30h">15–30h</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">3. Minimum Performance Match</span>
+            <div class="segmented-group" id="rec-perf-group" role="group" aria-label="Minimum Performance Match">
+              <button type="button" class="seg-btn active" data-perf="optimal">Optimal Only</button>
+              <button type="button" class="seg-btn" data-perf="playable">Include Playable</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="recommend-results-grid" class="recommend-grid"></div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: Spec-Aware Cross-Play & Library Management -->
+    <section id="section-library" class="erp-section" aria-labelledby="heading-library">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-eyebrow">CROSS-PLAY MATRIX // HLTB &amp; DEMAND TIER REGISTRY</span>
+          <h2 id="heading-library" class="section-title">Spec-Aware Cross-Play Game Library</h2>
+          <p class="section-desc">Dynamic compatibility badges compare each game's Performance Demand Tier (1–5) against every owned rig sharing its ecosystem.</p>
+        </div>
+        <button id="btn-section-add-game" class="btn btn-primary" type="button">+ Add Game</button>
+      </div>
+      <div class="section-body">
+        <div class="library-toolbar">
+          <div class="filter-cluster">
+            <input id="lib-search-input" type="search" class="input-field" placeholder="Search title or genre..." aria-label="Search games" />
+            <select id="lib-ecosystem-filter" class="select-field" aria-label="Filter by ecosystem">
+              <option value="all">All Ecosystems</option>
+              <option value="Steam">Steam</option>
+              <option value="Xbox">Xbox</option>
+              <option value="Switch">Switch</option>
+              <option value="Emulation">Emulation</option>
+              <option value="Android">Android</option>
+              <option value="PlayStation">PlayStation</option>
+            </select>
+            <select id="lib-status-filter" class="select-field" aria-label="Filter by status">
+              <option value="all">All Statuses</option>
+              <option value="Backlog">Backlog</option>
+              <option value="Playing">Playing</option>
+              <option value="Completed">Completed</option>
+            </select>
+            <select id="lib-device-filter" class="select-field" aria-label="Filter by compatible device">
+              <option value="0">All Hardware Rigs</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="library-table-wrap">
+          <table class="library-table" id="games-table">
+            <thead>
+              <tr>
+                <th>Title &amp; Ecosystem</th>
+                <th>Status</th>
+                <th>Demand Tier</th>
+                <th>Smart Cross-Play Compatibility (Per Owned Rig)</th>
+                <th>HLTB Estimates (Main / +Extra / 100%)</th>
+                <th>Hours Logged &amp; Primary Rig</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="games-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: Hardware Asset Registry (Preset Catalog + Custom Rigs) -->
+    <section id="section-hardware" class="erp-section" aria-labelledby="heading-hardware">
+      <div class="section-header">
+        <div class="section-title-group">
+          <span class="section-eyebrow">ASSET INVENTORY // PRESET CATALOG + CUSTOM BUILDS &amp; HANDHELDS</span>
+          <h2 id="heading-hardware" class="section-title">Hardware Asset Registry</h2>
+          <p class="section-desc">Register standard consoles from the built-in preset database or configure custom handhelds and living-room PCs with local photo uploads.</p>
+        </div>
+        <button id="btn-section-add-device" class="btn btn-primary" type="button">+ Add Custom Build / Handheld</button>
+      </div>
+      <div class="section-body">
+        <!-- Built-in Preset Database Strip -->
+        <div class="preset-strip">
+          <div class="preset-strip-header">
+            <div>
+              <span class="section-eyebrow">BUILT-IN HARDWARE PRESET CATALOG (6 STANDARD CONSOLES / HANDHELDS)</span>
+              <div class="section-desc">One-click deploy a standard console preset or pre-fill the custom rig builder.</div>
+            </div>
+          </div>
+          <div id="preset-catalog-grid" class="preset-cards-row"></div>
+        </div>
+
+        <!-- Owned Rigs Grid -->
+        <div id="hardware-rigs-grid" class="hardware-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL 1: Add / Edit Game (with Auto-Fetch HLTB) -->
+  <div id="modal-game" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-game-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-game-title" class="modal-title">Add Game to Spec-Aware Library</h3>
+        <button id="btn-close-game-modal" class="modal-close" type="button" aria-label="Close modal">&times;</button>
+      </div>
+      <form id="form-game">
+        <input type="hidden" id="game-id-input" value="" />
+        <div class="modal-body">
+          <div class="form-group full">
+            <label for="game-title-input" class="form-label">Game Title *</label>
+            <div class="hltb-fetch-row">
+              <input id="game-title-input" name="title" type="text" class="input-field" list="hltb-catalog-datalist" placeholder="e.g., Baldur's Gate 3, Celeste, Hollow Knight..." required />
+              <datalist id="hltb-catalog-datalist"></datalist>
+              <button id="btn-auto-fetch-hltb" type="button" class="btn btn-cyan">⚡ Auto-Fetch HLTB</button>
+            </div>
+            <div id="hltb-status-banner" class="hltb-status-banner"></div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="game-ecosystem-select" class="form-label">Primary Ecosystem *</label>
+              <select id="game-ecosystem-select" name="primary_ecosystem" class="select-field" required>
+                <option value="Steam">Steam</option>
+                <option value="Xbox">Xbox</option>
+                <option value="Switch">Switch</option>
+                <option value="Emulation">Emulation</option>
+                <option value="Android">Android</option>
+                <option value="PlayStation">PlayStation</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-status-select" class="form-label">Library Status *</label>
+              <select id="game-status-select" name="status" class="select-field" required>
+                <option value="Backlog">Backlog</option>
+                <option value="Playing">Playing</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-tier-select" class="form-label">Performance Demand Tier (1–5) *</label>
+              <select id="game-tier-select" name="performance_demand_tier" class="select-field" required>
+                <option value="1">Tier 1 — Indie / 2D / Retro</option>
+                <option value="2">Tier 2 — Light 3D / Switch-Grade</option>
+                <option value="3" selected>Tier 3 — AA / Handheld AAA (Steam Deck / 780M)</option>
+                <option value="4">Tier 4 — Modern AAA High Settings</option>
+                <option value="5">Tier 5 — Heavy Next-Gen AAA / Path Tracing</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-device-select" class="form-label">Primary Device Played On</label>
+              <select id="game-device-select" name="primary_device_id" class="select-field">
+                <option value="">— Unassigned —</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="game-hltb-main" class="form-label">HLTB Main Story (Hours)</label>
+              <input id="game-hltb-main" name="hltb_main" type="number" step="0.5" min="0" value="10" class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label for="game-hltb-extras" class="form-label">HLTB Main + Extras (Hours)</label>
+              <input id="game-hltb-extras" name="hltb_extras" type="number" step="0.5" min="0" value="18" class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label for="game-hltb-comp" class="form-label">HLTB Completionist (Hours)</label>
+              <input id="game-hltb-comp" name="hltb_completionist" type="number" step="0.5" min="0" value="35" class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label for="game-hours-logged" class="form-label">Hours Logged So Far</label>
+              <input id="game-hours-logged" name="hours_logged" type="number" step="0.5" min="0" value="0" class="input-field" />
+            </div>
+
+            <div class="form-group">
+              <label for="game-genre-input" class="form-label">Genre (Optional)</label>
+              <input id="game-genre-input" name="genre" type="text" class="input-field" placeholder="e.g., Action RPG, Metroidvania" />
+            </div>
+
+            <div class="form-group">
+              <label for="game-year-input" class="form-label">Release Year (Optional)</label>
+              <input id="game-year-input" name="release_year" type="number" min="1975" max="2035" value="2024" class="input-field" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-game-modal" type="button" class="btn">Cancel</button>
+          <button id="btn-save-game" type="submit" class="btn btn-primary">Save Game to Library</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Add / Edit Hardware Rig (Preset or Custom Build + Photo Upload) -->
+  <div id="modal-device" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-device-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-device-title" class="modal-title">Register Hardware Asset (Preset or Custom Rig)</h3>
+        <button id="btn-close-device-modal" class="modal-close" type="button" aria-label="Close modal">&times;</button>
+      </div>
+      <form id="form-device" enctype="multipart/form-data">
+        <input type="hidden" id="device-id-input" value="" />
+        <input type="hidden" id="device-photo-url-input" name="photo_url" value="" />
+        <input type="hidden" id="device-preset-id-input" name="preset_id" value="" />
+        <div class="modal-body">
+          <div class="form-group full">
+            <label for="device-preset-prefill" class="form-label">Pre-Fill from Built-In Console Preset (Optional)</label>
+            <select id="device-preset-prefill" class="select-field">
+              <option value="">— Custom Build / Handheld (Enter Specs Manually) —</option>
+            </select>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="device-name-input" class="form-label">Hardware Rig / Console Name *</label>
+              <input id="device-name-input" name="name" type="text" class="input-field" placeholder="e.g., ROG Ally X, Bazzite Living Room PC" required />
+            </div>
+
+            <div class="form-group">
+              <label for="device-tier-select" class="form-label">Performance Tier (1 to 5) *</label>
+              <select id="device-tier-select" name="performance_tier" class="select-field" required>
+                <option value="1">Tier 1 — Indie / Retro / Microconsole</option>
+                <option value="2">Tier 2 — Portable Hybrid (Switch Class)</option>
+                <option value="3" selected>Tier 3 — Handheld PC APU (Deck OLED / 7840U)</option>
+                <option value="4">Tier 4 — High-Refresh 1440p Desktop / Mid-High GPU</option>
+                <option value="5">Tier 5 — Heavy AAA Flagship (PS5 / Series X / 7900 XTX)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="device-cpu-input" class="form-label">CPU Specification *</label>
+              <input id="device-cpu-input" name="cpu" type="text" class="input-field" placeholder="e.g., AMD Ryzen Z1 Extreme (8C/16T)" required />
+            </div>
+
+            <div class="form-group">
+              <label for="device-gpu-input" class="form-label">GPU Specification *</label>
+              <input id="device-gpu-input" name="gpu" type="text" class="input-field" placeholder="e.g., AMD Radeon 780M (12 RDNA3 CUs)" required />
+            </div>
+
+            <div class="form-group">
+              <label for="device-ram-input" class="form-label">RAM / Memory *</label>
+              <input id="device-ram-input" name="ram" type="text" class="input-field" placeholder="e.g., 24 GB LPDDR5X-7500" required />
+            </div>
+
+            <div class="form-group">
+              <label for="device-os-input" class="form-label">Operating System *</label>
+              <input id="device-os-input" name="os" type="text" class="input-field" placeholder="e.g., SteamOS 3.6 / Bazzite Linux / Windows 11" required />
+            </div>
+          </div>
+
+          <div class="form-group full">
+            <label for="device-photo-file" class="form-label">Hardware Photo Upload (Saved locally to $UPLOAD_DIR)</label>
+            <input id="device-photo-file" name="photo" type="file" accept="image/*" class="input-field" />
+          </div>
+
+          <div class="form-group full">
+            <span class="form-label">Supported Gaming Ecosystems *</span>
+            <div class="checkbox-pills" id="device-ecosystems-group">
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Steam" checked /> Steam</label>
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Xbox" /> Xbox</label>
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Switch" /> Switch</label>
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Emulation" /> Emulation</label>
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="Android" /> Android</label>
+              <label class="checkbox-pill"><input type="checkbox" name="eco_check" value="PlayStation" /> PlayStation</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-device-modal" type="button" class="btn">Cancel</button>
+          <button id="btn-save-device" type="submit" class="btn btn-primary">Save Hardware Asset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

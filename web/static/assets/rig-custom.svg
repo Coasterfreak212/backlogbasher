@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" fill="none">
+  <rect width="360" height="180" rx="12" fill="#0F141C"/>
+  <rect x="10" y="10" width="340" height="160" rx="8" stroke="#243042" stroke-dasharray="4 4"/>
+  <text x="22" y="28" fill="#64748B" font-family="monospace" font-size="10">CUSTOM ASSET // MODULAR RIG</text>
+  <rect x="86" y="46" width="188" height="96" rx="10" fill="#161F2C" stroke="#F59E0B" stroke-width="2"/>
+  <text x="180" y="88" text-anchor="middle" fill="#F59E0B" font-family="monospace" font-size="13" font-weight="bold">CUSTOM GAMING RIG</text>
+  <text x="180" y="108" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="9">USER-DEFINED HARDWARE NODE</text>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" fill="none">
+  <rect width="360" height="180" rx="12" fill="#0F141C"/>
+  <rect x="10" y="10" width="340" height="160" rx="8" stroke="#243042" stroke-dasharray="4 4"/>
+  <text x="22" y="28" fill="#64748B" font-family="monospace" font-size="10">ASSET // BAZZITE-HTPC-7900XTX // TIER-5</text>
+  <!-- SFF Console PC Chassis -->
+  <rect x="76" y="42" width="208" height="104" rx="10" fill="#161E2B" stroke="#10B981" stroke-width="2"/>
+  <!-- Mesh & GPU chambers -->
+  <rect x="90" y="54" width="110" height="80" rx="4" fill="#0B0F15" stroke="#334155" stroke-width="1.5"/>
+  <circle cx="122" cy="94" r="22" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <circle cx="170" cy="94" r="22" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <circle cx="122" cy="94" r="6" fill="#10B981"/>
+  <circle cx="170" cy="94" r="6" fill="#10B981"/>
+  <!-- Telemetry panel -->
+  <rect x="210" y="54" width="60" height="80" rx="4" fill="#0B0F15" stroke="#1E293B"/>
+  <text x="240" y="74" text-anchor="middle" fill="#10B981" font-family="monospace" font-size="10" font-weight="bold">7800X3D</text>
+  <text x="240" y="90" text-anchor="middle" fill="#E2E8F0" font-family="monospace" font-size="9">7900 XTX</text>
+  <text x="240" y="106" text-anchor="middle" fill="#38BDF8" font-family="monospace" font-size="8">24GB VRAM</text>
+  <rect x="222" y="116" width="36" height="8" rx="4" fill="#10B981"/>
+</svg>

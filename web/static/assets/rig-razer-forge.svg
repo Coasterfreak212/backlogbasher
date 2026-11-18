@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" fill="none">
+  <rect width="360" height="180" rx="12" fill="#0F141C"/>
+  <rect x="10" y="10" width="340" height="160" rx="8" stroke="#243042" stroke-dasharray="4 4"/>
+  <text x="22" y="28" fill="#64748B" font-family="monospace" font-size="10">PRESET // RAZER-FORGE-TV // TIER-1</text>
+  <rect x="96" y="66" width="168" height="62" rx="8" fill="#111827" stroke="#10B981" stroke-width="2"/>
+  <text x="180" y="94" text-anchor="middle" fill="#10B981" font-family="monospace" font-size="12" font-weight="bold">RAZER FORGE TV</text>
+  <text x="180" y="112" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="9">SNAPDRAGON 805 // ADRENO 420</text>
+</svg>

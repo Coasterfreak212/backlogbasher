@@ -1,0 +1,572 @@
+[
+  {
+    "title": "Cyberpunk 2077",
+    "main_story": 25.5,
+    "main_extras": 62.0,
+    "completionist": 105.0,
+    "demand_tier": 5,
+    "ecosystem": "Steam",
+    "genre": "Action RPG",
+    "release_year": 2020
+  },
+  {
+    "title": "Cyberpunk 2077: Phantom Liberty",
+    "main_story": 13.5,
+    "main_extras": 22.5,
+    "completionist": 31.0,
+    "demand_tier": 5,
+    "ecosystem": "Steam",
+    "genre": "Action RPG",
+    "release_year": 2023
+  },
+  {
+    "title": "Balatro",
+    "main_story": 7.5,
+    "main_extras": 36.0,
+    "completionist": 195.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Roguelike Deckbuilder",
+    "release_year": 2024
+  },
+  {
+    "title": "Elden Ring",
+    "main_story": 59.5,
+    "main_extras": 101.0,
+    "completionist": 134.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Action RPG",
+    "release_year": 2022
+  },
+  {
+    "title": "Elden Ring: Shadow of the Erdtree",
+    "main_story": 26.0,
+    "main_extras": 40.5,
+    "completionist": 51.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Action RPG",
+    "release_year": 2024
+  },
+  {
+    "title": "Hades II",
+    "main_story": 19.5,
+    "main_extras": 38.0,
+    "completionist": 68.0,
+    "demand_tier": 2,
+    "ecosystem": "Steam",
+    "genre": "Action Roguelike",
+    "release_year": 2024
+  },
+  {
+    "title": "Hades",
+    "main_story": 22.5,
+    "main_extras": 49.0,
+    "completionist": 95.0,
+    "demand_tier": 2,
+    "ecosystem": "Steam",
+    "genre": "Action Roguelike",
+    "release_year": 2020
+  },
+  {
+    "title": "The Legend of Zelda: Tears of the Kingdom",
+    "main_story": 59.0,
+    "main_extras": 113.0,
+    "completionist": 244.0,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "Action-Adventure",
+    "release_year": 2023
+  },
+  {
+    "title": "The Legend of Zelda: Breath of the Wild",
+    "main_story": 50.0,
+    "main_extras": 98.0,
+    "completionist": 190.0,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "Action-Adventure",
+    "release_year": 2017
+  },
+  {
+    "title": "Metroid Dread",
+    "main_story": 9.0,
+    "main_extras": 11.5,
+    "completionist": 13.5,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "Metroidvania",
+    "release_year": 2021
+  },
+  {
+    "title": "Halo Infinite",
+    "main_story": 11.0,
+    "main_extras": 18.5,
+    "completionist": 28.0,
+    "demand_tier": 4,
+    "ecosystem": "Xbox",
+    "genre": "First-Person Shooter",
+    "release_year": 2021
+  },
+  {
+    "title": "Starfield",
+    "main_story": 23.0,
+    "main_extras": 66.0,
+    "completionist": 148.0,
+    "demand_tier": 5,
+    "ecosystem": "Xbox",
+    "genre": "Sci-Fi RPG",
+    "release_year": 2023
+  },
+  {
+    "title": "Chrono Trigger",
+    "main_story": 23.0,
+    "main_extras": 26.5,
+    "completionist": 42.0,
+    "demand_tier": 1,
+    "ecosystem": "Emulation",
+    "genre": "JRPG",
+    "release_year": 1995
+  },
+  {
+    "title": "A Short Hike",
+    "main_story": 1.5,
+    "main_extras": 2.5,
+    "completionist": 4.5,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Cozy Exploration",
+    "release_year": 2019
+  },
+  {
+    "title": "Black Myth: Wukong",
+    "main_story": 35.0,
+    "main_extras": 49.0,
+    "completionist": 68.5,
+    "demand_tier": 5,
+    "ecosystem": "Steam",
+    "genre": "Action RPG",
+    "release_year": 2024
+  },
+  {
+    "title": "Alan Wake 2",
+    "main_story": 19.0,
+    "main_extras": 23.5,
+    "completionist": 29.0,
+    "demand_tier": 5,
+    "ecosystem": "Steam",
+    "genre": "Survival Horror",
+    "release_year": 2023
+  },
+  {
+    "title": "Baldur's Gate 3",
+    "main_story": 68.5,
+    "main_extras": 115.0,
+    "completionist": 166.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "CRPG",
+    "release_year": 2023
+  },
+  {
+    "title": "Dave the Diver",
+    "main_story": 24.0,
+    "main_extras": 33.5,
+    "completionist": 47.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Adventure / Sim",
+    "release_year": 2023
+  },
+  {
+    "title": "Hollow Knight",
+    "main_story": 27.0,
+    "main_extras": 41.5,
+    "completionist": 64.5,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Metroidvania",
+    "release_year": 2017
+  },
+  {
+    "title": "Celeste",
+    "main_story": 8.0,
+    "main_extras": 14.0,
+    "completionist": 39.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Precision Platformer",
+    "release_year": 2018
+  },
+  {
+    "title": "Slay the Spire",
+    "main_story": 12.5,
+    "main_extras": 45.0,
+    "completionist": 182.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Roguelike Deckbuilder",
+    "release_year": 2019
+  },
+  {
+    "title": "Vampire Survivors",
+    "main_story": 14.0,
+    "main_extras": 29.5,
+    "completionist": 62.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Bullet Heaven",
+    "release_year": 2022
+  },
+  {
+    "title": "Dead Cells",
+    "main_story": 14.0,
+    "main_extras": 40.0,
+    "completionist": 102.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Action Roguelike",
+    "release_year": 2018
+  },
+  {
+    "title": "Persona 5 Royal",
+    "main_story": 101.0,
+    "main_extras": 123.0,
+    "completionist": 143.0,
+    "demand_tier": 3,
+    "ecosystem": "Steam",
+    "genre": "JRPG",
+    "release_year": 2020
+  },
+  {
+    "title": "Metaphor: ReFantazio",
+    "main_story": 65.0,
+    "main_extras": 84.0,
+    "completionist": 105.0,
+    "demand_tier": 3,
+    "ecosystem": "Steam",
+    "genre": "JRPG",
+    "release_year": 2024
+  },
+  {
+    "title": "Red Dead Redemption 2",
+    "main_story": 50.5,
+    "main_extras": 83.0,
+    "completionist": 187.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Open-World Action",
+    "release_year": 2018
+  },
+  {
+    "title": "The Witcher 3: Wild Hunt",
+    "main_story": 51.5,
+    "main_extras": 103.0,
+    "completionist": 173.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Action RPG",
+    "release_year": 2015
+  },
+  {
+    "title": "God of War Ragnarök",
+    "main_story": 26.5,
+    "main_extras": 40.0,
+    "completionist": 54.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Action-Adventure",
+    "release_year": 2022
+  },
+  {
+    "title": "Helldivers 2",
+    "main_story": 25.0,
+    "main_extras": 52.0,
+    "completionist": 89.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Co-op Shooter",
+    "release_year": 2024
+  },
+  {
+    "title": "Space Marine 2",
+    "main_story": 10.5,
+    "main_extras": 18.0,
+    "completionist": 40.0,
+    "demand_tier": 5,
+    "ecosystem": "Steam",
+    "genre": "Third-Person Action",
+    "release_year": 2024
+  },
+  {
+    "title": "Super Mario Bros. Wonder",
+    "main_story": 10.0,
+    "main_extras": 15.0,
+    "completionist": 20.0,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "2D Platformer",
+    "release_year": 2023
+  },
+  {
+    "title": "Super Mario Odyssey",
+    "main_story": 12.5,
+    "main_extras": 27.5,
+    "completionist": 62.0,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "3D Platformer",
+    "release_year": 2017
+  },
+  {
+    "title": "Xenoblade Chronicles 3",
+    "main_story": 62.5,
+    "main_extras": 108.0,
+    "completionist": 172.0,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "JRPG",
+    "release_year": 2022
+  },
+  {
+    "title": "Fire Emblem: Three Houses",
+    "main_story": 49.0,
+    "main_extras": 66.0,
+    "completionist": 195.0,
+    "demand_tier": 2,
+    "ecosystem": "Switch",
+    "genre": "Tactical RPG",
+    "release_year": 2019
+  },
+  {
+    "title": "Forza Horizon 5",
+    "main_story": 21.0,
+    "main_extras": 52.0,
+    "completionist": 135.0,
+    "demand_tier": 4,
+    "ecosystem": "Xbox",
+    "genre": "Open-World Racing",
+    "release_year": 2021
+  },
+  {
+    "title": "Hi-Fi RUSH",
+    "main_story": 11.0,
+    "main_extras": 15.0,
+    "completionist": 60.0,
+    "demand_tier": 3,
+    "ecosystem": "Xbox",
+    "genre": "Rhythm Action",
+    "release_year": 2023
+  },
+  {
+    "title": "Indiana Jones and the Great Circle",
+    "main_story": 15.0,
+    "main_extras": 24.5,
+    "completionist": 36.0,
+    "demand_tier": 5,
+    "ecosystem": "Xbox",
+    "genre": "Action-Adventure",
+    "release_year": 2024
+  },
+  {
+    "title": "Gears 5",
+    "main_story": 11.5,
+    "main_extras": 16.0,
+    "completionist": 68.0,
+    "demand_tier": 4,
+    "ecosystem": "Xbox",
+    "genre": "Third-Person Shooter",
+    "release_year": 2019
+  },
+  {
+    "title": "Super Metroid",
+    "main_story": 7.5,
+    "main_extras": 8.5,
+    "completionist": 9.5,
+    "demand_tier": 1,
+    "ecosystem": "Emulation",
+    "genre": "Metroidvania",
+    "release_year": 1994
+  },
+  {
+    "title": "Castlevania: Symphony of the Night",
+    "main_story": 9.0,
+    "main_extras": 11.0,
+    "completionist": 15.5,
+    "demand_tier": 1,
+    "ecosystem": "Emulation",
+    "genre": "Metroidvania",
+    "release_year": 1997
+  },
+  {
+    "title": "Final Fantasy VII",
+    "main_story": 36.5,
+    "main_extras": 51.0,
+    "completionist": 82.0,
+    "demand_tier": 1,
+    "ecosystem": "Emulation",
+    "genre": "JRPG",
+    "release_year": 1997
+  },
+  {
+    "title": "Shadow of the Colossus",
+    "main_story": 8.0,
+    "main_extras": 10.5,
+    "completionist": 24.5,
+    "demand_tier": 2,
+    "ecosystem": "Emulation",
+    "genre": "Action-Adventure",
+    "release_year": 2005
+  },
+  {
+    "title": "God of War II",
+    "main_story": 12.0,
+    "main_extras": 13.5,
+    "completionist": 18.0,
+    "demand_tier": 2,
+    "ecosystem": "Emulation",
+    "genre": "Action Hack & Slash",
+    "release_year": 2007
+  },
+  {
+    "title": "Demon's Souls (PS3)",
+    "main_story": 28.5,
+    "main_extras": 39.0,
+    "completionist": 75.0,
+    "demand_tier": 3,
+    "ecosystem": "Emulation",
+    "genre": "Action RPG",
+    "release_year": 2009
+  },
+  {
+    "title": "Disco Elysium",
+    "main_story": 22.0,
+    "main_extras": 31.5,
+    "completionist": 46.5,
+    "demand_tier": 2,
+    "ecosystem": "Steam",
+    "genre": "Narrative RPG",
+    "release_year": 2019
+  },
+  {
+    "title": "Outer Wilds",
+    "main_story": 17.5,
+    "main_extras": 22.5,
+    "completionist": 27.5,
+    "demand_tier": 2,
+    "ecosystem": "Steam",
+    "genre": "Mystery Exploration",
+    "release_year": 2019
+  },
+  {
+    "title": "Subnautica",
+    "main_story": 29.5,
+    "main_extras": 44.5,
+    "completionist": 56.0,
+    "demand_tier": 3,
+    "ecosystem": "Steam",
+    "genre": "Survival Exploration",
+    "release_year": 2018
+  },
+  {
+    "title": "Stardew Valley",
+    "main_story": 52.5,
+    "main_extras": 96.0,
+    "completionist": 165.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Farming RPG",
+    "release_year": 2016
+  },
+  {
+    "title": "Armored Core VI: Fires of Rubicon",
+    "main_story": 18.5,
+    "main_extras": 29.0,
+    "completionist": 51.0,
+    "demand_tier": 4,
+    "ecosystem": "Steam",
+    "genre": "Mecha Action",
+    "release_year": 2023
+  },
+  {
+    "title": "Sekiro: Shadows Die Twice",
+    "main_story": 29.5,
+    "main_extras": 41.0,
+    "completionist": 69.5,
+    "demand_tier": 3,
+    "ecosystem": "Steam",
+    "genre": "Action-Adventure",
+    "release_year": 2019
+  },
+  {
+    "title": "Return of the Obra Dinn",
+    "main_story": 8.0,
+    "main_extras": 9.5,
+    "completionist": 10.5,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Puzzle Mystery",
+    "release_year": 2018
+  },
+  {
+    "title": "Stray",
+    "main_story": 5.0,
+    "main_extras": 6.5,
+    "completionist": 9.5,
+    "demand_tier": 3,
+    "ecosystem": "Steam",
+    "genre": "Adventure",
+    "release_year": 2022
+  },
+  {
+    "title": "Portal 2",
+    "main_story": 8.5,
+    "main_extras": 11.5,
+    "completionist": 21.0,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "First-Person Puzzle",
+    "release_year": 2011
+  },
+  {
+    "title": "Titanfall 2",
+    "main_story": 6.0,
+    "main_extras": 8.0,
+    "completionist": 15.5,
+    "demand_tier": 3,
+    "ecosystem": "Steam",
+    "genre": "First-Person Shooter",
+    "release_year": 2016
+  },
+  {
+    "title": "Inside",
+    "main_story": 3.5,
+    "main_extras": 4.0,
+    "completionist": 4.5,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Puzzle Platformer",
+    "release_year": 2016
+  },
+  {
+    "title": "Mouthwashing",
+    "main_story": 2.5,
+    "main_extras": 3.0,
+    "completionist": 4.5,
+    "demand_tier": 1,
+    "ecosystem": "Steam",
+    "genre": "Psychological Horror",
+    "release_year": 2024
+  },
+  {
+    "title": "TowerFall Ascension",
+    "main_story": 3.5,
+    "main_extras": 8.0,
+    "completionist": 25.0,
+    "demand_tier": 1,
+    "ecosystem": "Android",
+    "genre": "Arena Platformer",
+    "release_year": 2013
+  }
+]

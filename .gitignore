@@ -1,0 +1,23 @@
+# Compiled binaries
+backlogbasher
+*.exe
+*.out
+
+# Local runtime data & SQLite WAL files
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Environment config
+.env
+
+# System / shell files
+.bash_logout
+.bashrc
+.profile
+.gemini
+.cache
+.config
+.local
+go/

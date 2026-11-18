@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" fill="none">
+  <rect width="360" height="180" rx="12" fill="#0F141C"/>
+  <rect x="10" y="10" width="340" height="160" rx="8" stroke="#243042" stroke-dasharray="4 4"/>
+  <text x="22" y="28" fill="#64748B" font-family="monospace" font-size="10">PRESET // XBOX-SERIES-X // TIER-5</text>
+  <!-- Monolith Tower -->
+  <rect x="130" y="34" width="100" height="122" rx="6" fill="#151C26" stroke="#22C55E" stroke-width="2"/>
+  <!-- Top concave vent -->
+  <ellipse cx="180" cy="44" rx="38" ry="6" fill="#064E3B" stroke="#22C55E" stroke-width="1"/>
+  <!-- Xbox power jewel -->
+  <circle cx="150" cy="64" r="6" fill="#22C55E"/>
+  <!-- Disc slot -->
+  <line x1="146" y1="90" x2="146" y2="138" stroke="#475569" stroke-width="3" stroke-linecap="round"/>
+  <text x="192" y="88" text-anchor="middle" fill="#E2E8F0" font-family="monospace" font-size="11" font-weight="bold">12 TFLOPS</text>
+  <text x="192" y="104" text-anchor="middle" fill="#22C55E" font-family="monospace" font-size="9">52 CU RDNA2</text>
+  <text x="192" y="120" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8">16GB GDDR6</text>
+</svg>
