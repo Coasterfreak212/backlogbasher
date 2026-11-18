@@ -44,7 +44,7 @@ func setupTestServer(t *testing.T) (*api.Server, *db.Store, string) {
 func TestPresetsSeedAndCompatibility(t *testing.T) {
 	srv, _, _ := setupTestServer(t)
 
-	// 1. Verify /api/presets has all 6 required presets
+	// 1. Verify /api/presets has the expanded generational console presets
 	req := httptest.NewRequest(http.MethodGet, "/api/presets", nil)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
@@ -55,8 +55,18 @@ func TestPresetsSeedAndCompatibility(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &presets); err != nil {
 		t.Fatalf("unmarshal presets: %v", err)
 	}
-	if len(presets) != 6 {
-		t.Fatalf("expected 6 presets, got %d", len(presets))
+	if len(presets) < 30 {
+		t.Fatalf("expected at least 30 presets, got %d", len(presets))
+	}
+	foundAtari := false
+	for _, p := range presets {
+		if p.ID == "atari-2600" {
+			foundAtari = true
+			break
+		}
+	}
+	if !foundAtari {
+		t.Fatalf("expected atari-2600 in presets")
 	}
 
 	// 2. Verify /api/devices has the 4 seeded rigs

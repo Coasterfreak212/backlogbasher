@@ -83,6 +83,7 @@
 
       populateDeviceDropdowns();
       renderKPIStrip();
+      renderCommandBrief();
       renderUtilizationSection();
       renderLibrarySection();
       renderPresetsAndHardware();
@@ -157,6 +158,78 @@
   }
 
   // --- SECTION 1: Console Love / Utilization Summary ---
+  function renderCommandBrief() {
+    const grid = document.getElementById('command-brief-grid');
+    if (!grid) return;
+
+    const playing = state.games.filter((g) => g.status === 'Playing');
+    const quickWins = state.games
+      .filter((g) => g.status === 'Backlog' && g.hltb_main > 0 && g.hltb_main <= 5)
+      .sort((a, b) => a.hltb_main - b.hltb_main)
+      .slice(0, 4);
+
+    const avgHours = state.devices.length
+      ? state.devices.reduce((s, d) => s + (d.total_hours || 0), 0) / state.devices.length
+      : 0;
+    const neglected = state.devices.filter(
+      (d) => (d.total_hours || 0) === 0 || (avgHours > 0 && (d.total_hours || 0) < avgHours * 0.2)
+    );
+
+    const playingHTML = playing.length
+      ? playing
+          .slice(0, 4)
+          .map((g) => {
+            const pct = g.hltb_main > 0 ? Math.min(100, Math.round((g.hours_logged / g.hltb_main) * 100)) : 0;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <div>
+                <div style="font-weight:600;color:#e2e8f0;">${escapeHTML(g.title)}</div>
+                <div style="font-size:0.78rem;color:#94a3b8;">${g.hours_logged.toFixed(1)}h / ${g.hltb_main > 0 ? g.hltb_main.toFixed(1) + 'h' : '?'} (${pct}%)</div>
+              </div>
+              <span class="eco-badge eco-${escapeHTML(g.ecosystem)}">${escapeHTML(g.ecosystem)}</span>
+            </div>`;
+          })
+          .join('')
+      : `<div style="color:#64748b;font-size:0.85rem;">No active playthroughs. Pick a game from Quick Wins or Recommender!</div>`;
+
+    const quickWinsHTML = quickWins.length
+      ? quickWins
+          .map(
+            (g) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <span style="font-weight:500;color:#e2e8f0;">${escapeHTML(g.title)}</span>
+              <span style="font-size:0.8rem;color:#38bdf8;font-family:monospace;">~${g.hltb_main.toFixed(1)}h</span>
+            </div>`
+          )
+          .join('')
+      : `<div style="color:#64748b;font-size:0.85rem;">No sub-5h backlog games found.</div>`;
+
+    const neglectedHTML = neglected.length
+      ? neglected
+          .slice(0, 4)
+          .map(
+            (d) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <span style="font-weight:500;color:#fbbf24;">${escapeHTML(d.name)}</span>
+              <span style="font-size:0.78rem;color:#94a3b8;">${(d.total_hours || 0).toFixed(1)}h logged</span>
+            </div>`
+          )
+          .join('')
+      : `<div style="color:#34d399;font-size:0.85rem;">All rigs are actively getting love!</div>`;
+
+    grid.innerHTML = `
+      <div class="util-card">
+        <div class="util-card-header"><span class="util-rig-name">🎮 Active Playthroughs (${playing.length})</span></div>
+        <div style="margin-top:8px;">${playingHTML}</div>
+      </div>
+      <div class="util-card">
+        <div class="util-card-header"><span class="util-rig-name">⚡ Quick Wins (&lt;5h Backlog)</span></div>
+        <div style="margin-top:8px;">${quickWinsHTML}</div>
+      </div>
+      <div class="util-card">
+        <div class="util-card-header"><span class="util-rig-name">⚠ Neglected Hardware (${neglected.length})</span></div>
+        <div style="margin-top:8px;">${neglectedHTML}</div>
+      </div>
+    `;
+  }
+
   function renderUtilizationSection() {
     const s = state.stats;
     if (!s) return;

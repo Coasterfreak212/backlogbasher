@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 180" fill="none">
+  <rect width="360" height="180" rx="12" fill="#0F141C"/>
+  <rect x="10" y="10" width="340" height="160" rx="8" stroke="#243042" stroke-dasharray="4 4"/>
+  <text x="22" y="28" fill="#64748B" font-family="monospace" font-size="10">PRESET // NINTENDO-64 // TIER-1</text>
+  <rect x="92" y="54" width="176" height="86" rx="10" fill="#0B0F15" stroke="#22C55E" stroke-width="2"/>
+  <line x1="106" y1="68" x2="254" y2="68" stroke="#334155" stroke-width="2"/>
+  <circle cx="114" cy="126" r="3.5" fill="#22C55E"/>
+  <text x="180" y="96" text-anchor="middle" fill="#22C55E" font-family="monospace" font-size="11" font-weight="bold">NINTENDO 64</text>
+  <text x="180" y="114" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8.5">VR4300 64-BIT • 4MB</text>
+</svg>

@@ -116,7 +116,7 @@ func (s *Service) FetchEstimate(title string) models.HLTBEstimate {
 }
 
 func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
-	initURL := fmt.Sprintf("https://howlongtobeat.com/api/find/init?t=%d", time.Now().UnixMilli())
+	initURL := fmt.Sprintf("https://howlongtobeat.com/api/search/site/init?t=%d", time.Now().UnixMilli())
 	req, err := http.NewRequest(http.MethodGet, initURL, nil)
 	if err != nil {
 		return models.HLTBEstimate{}, err
@@ -172,7 +172,7 @@ func (s *Service) queryLiveHLTB(title string) (models.HLTBEstimate, error) {
 		return models.HLTBEstimate{}, err
 	}
 
-	findReq, err := http.NewRequest(http.MethodPost, "https://howlongtobeat.com/api/find", bytes.NewReader(bodyBytes))
+	findReq, err := http.NewRequest(http.MethodPost, "https://howlongtobeat.com/api/search/site", bytes.NewReader(bodyBytes))
 	if err != nil {
 		return models.HLTBEstimate{}, err
 	}
