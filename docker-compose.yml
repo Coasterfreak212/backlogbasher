@@ -11,5 +11,6 @@ services:
       - PORT=8080
       - DB_PATH=/app/data/consoleerp.db
       - UPLOAD_DIR=/app/data/uploads
+      - STEAMGRIDDB_API_KEY=${STEAMGRIDDB_API_KEY:-}
     volumes:
       - ./data:/app/data
