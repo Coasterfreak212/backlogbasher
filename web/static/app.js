@@ -18,6 +18,13 @@
       presetSearch: '',
       presetsCollapsed: false,
     },
+    sort: {
+      libCol: 'title',
+      libDir: 'asc',
+      utilSort: 'hours_desc',
+      hwSort: 'tier_desc',
+      presetSort: 'default',
+    },
     activeTab: 'all',
   };
 
@@ -519,9 +526,26 @@
       .join('');
 
     const gridEl = document.getElementById('utilization-grid');
-    gridEl.innerHTML = utils
+    const sortedUtils = [...utils].sort((a, b) => {
+      switch (state.sort.utilSort) {
+        case 'hours_asc':
+          return a.total_hours_logged - b.total_hours_logged || b.compatible_backlog_count - a.compatible_backlog_count;
+        case 'backlog_desc':
+          return b.compatible_backlog_count - a.compatible_backlog_count || b.active_backlog_count - a.active_backlog_count;
+        case 'tier_desc':
+          return b.performance_tier - a.performance_tier || b.total_hours_logged - a.total_hours_logged;
+        case 'name_asc':
+          return (a.device_name || '').localeCompare(b.device_name || '');
+        case 'hours_desc':
+        default:
+          return b.total_hours_logged - a.total_hours_logged || (a.device_name || '').localeCompare(b.device_name || '');
+      }
+    });
+
+    gridEl.innerHTML = sortedUtils
       .map((u, idx) => {
-        const color = SEGMENT_COLORS[idx % SEGMENT_COLORS.length];
+        const origIdx = utils.findIndex((x) => x.device_id === u.device_id);
+        const color = SEGMENT_COLORS[(origIdx >= 0 ? origIdx : idx) % SEGMENT_COLORS.length];
         const isNeglected = u.health_status === 'Neglected';
         const healthLabel = isNeglected ? '⚠ Neglected Rig' : u.health_status;
         const ecoPills = (u.ecosystems || [])
@@ -706,10 +730,24 @@
   }
 
   // --- SECTION 3: Spec-Aware Cross-Play Library ---
+  function updateLibrarySortHeaderUI() {
+    document.querySelectorAll('#games-table th.sortable-th').forEach((th) => {
+      const col = th.getAttribute('data-sort-col');
+      const icon = th.querySelector('.sort-indicator');
+      const isActive = col === state.sort.libCol;
+      th.classList.toggle('active', isActive);
+      if (icon) {
+        icon.textContent = isActive ? (state.sort.libDir === 'asc' ? '▲' : '▼') : '↕';
+      }
+    });
+  }
+
   function renderLibrarySection() {
     const tbody = document.getElementById('games-table-body');
     const summaryBar = document.getElementById('library-summary-bar');
     if (!tbody) return;
+
+    updateLibrarySortHeaderUI();
 
     const search = state.filters.search.toLowerCase().trim();
     const eco = state.filters.ecosystem;
@@ -728,6 +766,44 @@
         if (!isPrimary && !isCompat) return false;
       }
       return true;
+    });
+
+    // Apply column sorting
+    const statusRank = { Playing: 1, Backlog: 2, Completed: 3 };
+    const dirMul = state.sort.libDir === 'asc' ? 1 : -1;
+
+    filtered.sort((a, b) => {
+      let cmp = 0;
+      switch (state.sort.libCol) {
+        case 'status':
+          cmp = (statusRank[a.status] || 9) - (statusRank[b.status] || 9);
+          break;
+        case 'demand_tier':
+          cmp = (Number(a.performance_demand_tier) || 0) - (Number(b.performance_demand_tier) || 0);
+          break;
+        case 'compatibility': {
+          const optA = (a.compatibility || []).filter((c) => c.status === 'Optimal').length;
+          const optB = (b.compatibility || []).filter((c) => c.status === 'Optimal').length;
+          const totA = (a.compatibility || []).length;
+          const totB = (b.compatibility || []).length;
+          cmp = optA - optB || totA - totB;
+          break;
+        }
+        case 'hltb_main':
+          cmp = (Number(a.hltb_main) || 0) - (Number(b.hltb_main) || 0);
+          break;
+        case 'hours_logged':
+          cmp = (Number(a.hours_logged) || 0) - (Number(b.hours_logged) || 0);
+          break;
+        case 'title':
+        default:
+          cmp = (a.title || '').localeCompare(b.title || '');
+          break;
+      }
+      if (cmp === 0) {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      return cmp * dirMul;
     });
 
     if (summaryBar) {
@@ -951,6 +1027,21 @@
         );
       });
 
+      if (state.sort.presetSort !== 'default') {
+        filteredPresets.sort((a, b) => {
+          switch (state.sort.presetSort) {
+            case 'tier_desc':
+              return b.performance_tier - a.performance_tier || a.name.localeCompare(b.name);
+            case 'tier_asc':
+              return a.performance_tier - b.performance_tier || a.name.localeCompare(b.name);
+            case 'name_asc':
+              return a.name.localeCompare(b.name);
+            default:
+              return 0;
+          }
+        });
+      }
+
       if (filteredPresets.length === 0) {
         presetGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">No console presets match "${escapeHTML(
           state.filters.presetSearch
@@ -1037,7 +1128,21 @@
       return;
     }
 
-    hwGrid.innerHTML = state.devices
+    const sortedDevices = [...state.devices].sort((a, b) => {
+      switch (state.sort.hwSort) {
+        case 'tier_asc':
+          return a.performance_tier - b.performance_tier || (a.name || '').localeCompare(b.name || '');
+        case 'name_asc':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'name_desc':
+          return (b.name || '').localeCompare(a.name || '');
+        case 'tier_desc':
+        default:
+          return b.performance_tier - a.performance_tier || (a.name || '').localeCompare(b.name || '');
+      }
+    });
+
+    hwGrid.innerHTML = sortedDevices
       .map((d) => {
         const photoSrc = d.photo_url || '';
         const ecoBadges = (d.ecosystems || [])
@@ -1105,6 +1210,19 @@
   // --- Modal Management: Game Modal & Auto-Fetch HLTB + SteamGridDB ---
   let hltbSuggestTimer = null;
 
+  function updateGameCoverPreview(url) {
+    const preview = document.getElementById('game-cover-preview');
+    if (!preview) return;
+    const clean = (url || '').trim();
+    if (clean) {
+      preview.src = clean;
+      preview.style.display = 'block';
+    } else {
+      preview.removeAttribute('src');
+      preview.style.display = 'none';
+    }
+  }
+
   function closeHLTBSuggestDropdown() {
     const dd = document.getElementById('hltb-suggest-dropdown');
     if (dd) {
@@ -1123,6 +1241,7 @@
     }
     if (est.cover_url && coverInput) {
       coverInput.value = est.cover_url;
+      updateGameCoverPreview(est.cover_url);
     }
     if (est.main_story !== undefined) {
       document.getElementById('game-hltb-main').value = String(est.main_story);
@@ -1154,12 +1273,14 @@
 
     closeHLTBSuggestDropdown();
 
-    // If cover art wasn't included yet in the quick search item, fetch it in the background
-    if (!est.cover_url && est.matched_title && coverInput && !coverInput.value.trim()) {
-      apiJSON(`/api/steamgriddb?title=${encodeURIComponent(est.matched_title)}`)
+    // Always resolve a vertical cover art URL if none was attached yet or if we want to upgrade to SteamGridDB/Steam box art
+    const targetTitle = est.matched_title || est.query;
+    if (targetTitle && coverInput && !est.cover_url) {
+      apiJSON(`/api/steamgriddb?title=${encodeURIComponent(targetTitle)}`)
         .then((res) => {
-          if (res.found && res.cover_url && !coverInput.value.trim()) {
+          if (res.found && res.cover_url) {
             coverInput.value = res.cover_url;
+            updateGameCoverPreview(res.cover_url);
           }
         })
         .catch(() => {});
@@ -1272,7 +1393,9 @@
 
     document.getElementById('game-title-input').value = game ? game.title : '';
     const coverInput = document.getElementById('game-cover-url-input');
-    if (coverInput) coverInput.value = game ? game.cover_url || '' : '';
+    const initialCover = game ? game.cover_url || '' : '';
+    if (coverInput) coverInput.value = initialCover;
+    updateGameCoverPreview(initialCover);
     document.getElementById('game-ecosystem-select').value = game ? game.primary_ecosystem : 'Steam';
     document.getElementById('game-status-select').value = game ? game.status : 'Backlog';
     document.getElementById('game-tier-select').value = game ? String(game.performance_demand_tier) : '3';
@@ -1317,6 +1440,7 @@
       const est = await apiJSON(`/api/hltb?title=${encodeURIComponent(query)}`);
       if (est.cover_url && coverInput) {
         coverInput.value = est.cover_url;
+        updateGameCoverPreview(est.cover_url);
       }
       if (est.found) {
         applyHLTBEstimateToForm(est);
@@ -1343,16 +1467,17 @@
 
     if (!query) {
       banner.className = 'hltb-status-banner visible warn';
-      banner.textContent = 'Enter a game title first to fetch cover art from SteamGridDB.';
+      banner.textContent = 'Enter a game title first to fetch cover art.';
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = '⏳ Fetching Cover...';
+    btn.textContent = '⏳ Fetching...';
     try {
       const res = await apiJSON(`/api/steamgriddb?title=${encodeURIComponent(query)}`);
       if (res.found && res.cover_url) {
         coverInput.value = res.cover_url;
+        updateGameCoverPreview(res.cover_url);
         banner.className = 'hltb-status-banner visible success';
         banner.textContent = `✓ Sourced remote cover art via ${res.source.toUpperCase()}`;
       } else {
@@ -1366,7 +1491,7 @@
       banner.textContent = `Cover lookup error: ${err.message}`;
     } finally {
       btn.disabled = false;
-      btn.textContent = '🖼️ Fetch SteamGridDB Cover';
+      btn.textContent = '🖼️ Fetch Cover';
     }
   }
 
@@ -1510,6 +1635,47 @@
       });
     });
 
+    // Sortable Column Headers in Cross-Play Library Table
+    document.querySelectorAll('#games-table th.sortable-th').forEach((th) => {
+      const toggleSort = () => {
+        const col = th.getAttribute('data-sort-col');
+        if (!col) return;
+        if (state.sort.libCol === col) {
+          state.sort.libDir = state.sort.libDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sort.libCol = col;
+          // Default descending for numeric columns (tier, compatibility, hours), ascending for title/status
+          state.sort.libDir = ['demand_tier', 'compatibility', 'hltb_main', 'hours_logged'].includes(col)
+            ? 'desc'
+            : 'asc';
+        }
+        renderLibrarySection();
+      };
+      th.addEventListener('click', toggleSort);
+      th.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleSort();
+        }
+      });
+    });
+
+    // Section Header Sort Dropdowns (Console Love Utilization, Owned Rigs, Preset Catalog)
+    document.getElementById('util-sort-select')?.addEventListener('change', (e) => {
+      state.sort.utilSort = e.target.value;
+      renderUtilizationSection();
+    });
+
+    document.getElementById('hw-sort-select')?.addEventListener('change', (e) => {
+      state.sort.hwSort = e.target.value;
+      renderPresetsAndHardware();
+    });
+
+    document.getElementById('preset-sort-select')?.addEventListener('change', (e) => {
+      state.sort.presetSort = e.target.value;
+      renderPresetsAndHardware();
+    });
+
     // Preset Catalog Search & Collapse in Hardware Registry
     document.getElementById('preset-search-input')?.addEventListener('input', (e) => {
       state.filters.presetSearch = e.target.value;
@@ -1528,6 +1694,11 @@
         toggleBtn.textContent = state.filters.presetsCollapsed ? 'Show Preset Catalog ▼' : 'Hide Preset Catalog ▲';
       }
       renderPresetsAndHardware();
+    });
+
+    // Live cover art preview when typing/pasting a Cover Art URL
+    document.getElementById('game-cover-url-input')?.addEventListener('input', (e) => {
+      updateGameCoverPreview(e.target.value);
     });
 
     // Live HLTB Typeahead Autosuggest on Game Title Input

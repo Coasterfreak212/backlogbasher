@@ -609,8 +609,12 @@ func (s *Server) handleHLTBSearch(w http.ResponseWriter, r *http.Request) {
 		if title == "" {
 			continue
 		}
-		if defURL, ok := db.LookupDefaultCoverURL(title); ok {
+		if sgdbURL := s.sgdb.FetchFromSteamGridDB(title); sgdbURL != "" {
+			matches[i].CoverURL = sgdbURL
+		} else if defURL, ok := db.LookupDefaultCoverURL(title); ok {
 			matches[i].CoverURL = defURL
+		} else if matches[i].CoverURL == "" && i < 3 {
+			matches[i].CoverURL = s.sgdb.FetchCoverURL(title)
 		}
 	}
 	writeJSON(w, http.StatusOK, matches)
