@@ -66,6 +66,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/recommend", s.handleRecommend)
 	s.mux.HandleFunc("/api/stats", s.handleStats)
 	s.mux.HandleFunc("/api/hltb", s.handleHLTB)
+	s.mux.HandleFunc("/api/hltb/search", s.handleHLTBSearch)
 	s.mux.HandleFunc("/api/hltb/catalog", s.handleHLTBCatalog)
 	s.mux.HandleFunc("/api/steamgriddb", s.handleSteamGridDB)
 	s.mux.HandleFunc("/api/upload", s.handleUpload)
@@ -591,6 +592,28 @@ func (s *Server) handleHLTB(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, est)
+}
+
+func (s *Server) handleHLTBSearch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		query = strings.TrimSpace(r.URL.Query().Get("title"))
+	}
+	matches := s.hltbSvc.SearchEstimates(query, 8)
+	for i := range matches {
+		title := matches[i].MatchedTitle
+		if title == "" {
+			continue
+		}
+		if defURL, ok := db.LookupDefaultCoverURL(title); ok {
+			matches[i].CoverURL = defURL
+		}
+	}
+	writeJSON(w, http.StatusOK, matches)
 }
 
 func (s *Server) handleHLTBCatalog(w http.ResponseWriter, r *http.Request) {
