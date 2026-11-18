@@ -15,6 +15,8 @@
       ecosystem: 'all',
       status: 'all',
       deviceId: 0,
+      presetSearch: '',
+      presetsCollapsed: false,
     },
     activeTab: 'all',
   };
@@ -83,11 +85,11 @@
 
       populateDeviceDropdowns();
       renderKPIStrip();
+      await loadRecommendations();
       renderCommandBrief();
       renderUtilizationSection();
       renderLibrarySection();
       renderPresetsAndHardware();
-      await loadRecommendations();
     } catch (err) {
       showToast(`Sync error: ${err.message}`);
     }
@@ -157,20 +159,237 @@
     document.getElementById('nav-device-count').textContent = String(s.total_devices);
   }
 
-  // --- SECTION 1: Console Love / Utilization Summary ---
+  // --- PAGE 1: Executive Command Overview ---
   function renderCommandBrief() {
+    const kpiGrid = document.getElementById('overview-kpi-grid');
+    const analyticsGrid = document.getElementById('overview-analytics-grid');
     const grid = document.getElementById('command-brief-grid');
     if (!grid) return;
 
+    const s = state.stats || {
+      total_devices: state.devices.length,
+      total_games: state.games.length,
+      backlog_count: 0,
+      playing_count: 0,
+      completed_count: 0,
+      total_hours_logged: 0,
+      total_backlog_hltb_hours: 0,
+      completion_rate_pct: 0,
+      device_utilization: [],
+    };
+
     const playing = state.games.filter((g) => g.status === 'Playing');
-    const quickWins = state.games
-      .filter((g) => g.status === 'Backlog' && g.hltb_main > 0 && g.hltb_main <= 5)
+    const backlogGames = state.games.filter((g) => g.status === 'Backlog');
+    const quickWins = backlogGames
+      .filter((g) => g.hltb_main > 0 && g.hltb_main <= 5)
       .sort((a, b) => a.hltb_main - b.hltb_main)
       .slice(0, 4);
 
-    const utils = (state.stats && state.stats.device_utilization) || [];
+    const utils = s.device_utilization || [];
     const neglected = utils.filter((u) => u.health_status === 'Neglected');
 
+    // Cross-play optimal coverage calculation
+    const optimalReadyCount = state.games.filter((g) =>
+      (g.compatibility || []).some((c) => c.status === 'Optimal')
+    ).length;
+    const optimalCoveragePct = state.games.length
+      ? Math.round((optimalReadyCount / state.games.length) * 100)
+      : 0;
+
+    // Average remaining hours per backlog game
+    const avgBacklogMain = backlogGames.length
+      ? backlogGames.reduce((acc, g) => acc + Math.max(0, (g.hltb_main || 0) - (g.hours_logged || 0)), 0) /
+        backlogGames.length
+      : 0;
+
+    // Top Workhorse rig
+    const sortedRigs = [...utils].sort((a, b) => b.total_hours_logged - a.total_hours_logged);
+    const topRig = sortedRigs[0];
+
+    // 1. Render 6 Executive KPI Cards
+    if (kpiGrid) {
+      kpiGrid.innerHTML = `
+        <div class="overview-kpi-card">
+          <span class="overview-kpi-label">Fleet Playtime Logged</span>
+          <span class="overview-kpi-val">${s.total_hours_logged.toFixed(1)}h</span>
+          <span class="overview-kpi-sub">Across ${s.total_devices} registered rigs</span>
+        </div>
+        <div class="overview-kpi-card cyan">
+          <span class="overview-kpi-label">Remaining Backlog Debt</span>
+          <span class="overview-kpi-val">${s.total_backlog_hltb_hours.toFixed(1)}h</span>
+          <span class="overview-kpi-sub">${s.backlog_count} Backlog • ~${avgBacklogMain.toFixed(1)}h avg/game</span>
+        </div>
+        <div class="overview-kpi-card emerald">
+          <span class="overview-kpi-label">Library Completion Rate</span>
+          <span class="overview-kpi-val">${s.completion_rate_pct.toFixed(0)}%</span>
+          <span class="overview-kpi-sub">${s.completed_count} Cleared • ${s.playing_count} Now Playing</span>
+        </div>
+        <div class="overview-kpi-card emerald">
+          <span class="overview-kpi-label">Optimal Hardware Coverage</span>
+          <span class="overview-kpi-val">${optimalCoveragePct}%</span>
+          <span class="overview-kpi-sub">${optimalReadyCount} of ${state.games.length} titles run Optimal</span>
+        </div>
+        <div class="overview-kpi-card">
+          <span class="overview-kpi-label">Lead Workhorse Rig</span>
+          <span class="overview-kpi-val" style="font-size:1.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${
+            topRig ? escapeHTML(topRig.device_name) : '—'
+          }</span>
+          <span class="overview-kpi-sub">${
+            topRig ? `${topRig.total_hours_logged.toFixed(1)}h (${topRig.utilization_share_pct.toFixed(0)}% fleet share)` : 'No hours logged'
+          }</span>
+        </div>
+        <div class="overview-kpi-card ${neglected.length > 0 ? 'danger' : 'emerald'}">
+          <span class="overview-kpi-label">Neglected Rigs Alert</span>
+          <span class="overview-kpi-val">${neglected.length}</span>
+          <span class="overview-kpi-sub">${
+            neglected.length > 0 ? 'Need backlog dispatch attention' : 'All owned rigs active!'
+          }</span>
+        </div>
+      `;
+    }
+
+    // 2. Render Analytics Breakdown Row (Ecosystem Distribution + Demand Tier Profile + Top Recommended Dispatch Spotlight)
+    if (analyticsGrid) {
+      // Ecosystem distribution
+      const ecoCounts = {};
+      state.games.forEach((g) => {
+        const k = g.primary_ecosystem || 'Other';
+        ecoCounts[k] = (ecoCounts[k] || 0) + 1;
+      });
+      const ecoEntries = Object.entries(ecoCounts).sort((a, b) => b[1] - a[1]);
+      const ecoBarsHTML = ecoEntries.length
+        ? ecoEntries
+            .map(([ecoName, count], idx) => {
+              const pct = state.games.length ? Math.round((count / state.games.length) * 100) : 0;
+              const color = SEGMENT_COLORS[idx % SEGMENT_COLORS.length];
+              return `
+                <div class="overview-bar-row">
+                  <div class="overview-bar-meta">
+                    <span><strong style="color:var(--text-primary);">${escapeHTML(ecoName)}</strong></span>
+                    <span>${count} games (${pct}%)</span>
+                  </div>
+                  <div class="overview-bar-track">
+                    <div class="overview-bar-fill" style="width:${Math.max(4, pct)}%;background:${color};"></div>
+                  </div>
+                </div>
+              `;
+            })
+            .join('')
+        : `<div class="game-sub-meta">No games in library yet.</div>`;
+
+      // Demand Tier distribution
+      const tierCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      state.games.forEach((g) => {
+        const t = g.performance_demand_tier || 3;
+        tierCounts[t] = (tierCounts[t] || 0) + 1;
+      });
+      const tierBarsHTML = [5, 4, 3, 2, 1]
+        .map((t) => {
+          const count = tierCounts[t] || 0;
+          const pct = state.games.length ? Math.round((count / state.games.length) * 100) : 0;
+          return `
+            <div class="overview-bar-row">
+              <div class="overview-bar-meta">
+                <span>${escapeHTML(TIER_LABELS[t])}</span>
+                <span>${count} (${pct}%)</span>
+              </div>
+              <div class="overview-bar-track">
+                <div class="overview-bar-fill" style="width:${count > 0 ? Math.max(5, pct) : 0}%;background:var(--accent-cyan);"></div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      // Top #1 Recommended Next Game Spotlight
+      const topRec =
+        state.recommend.data && state.recommend.data.matches && state.recommend.data.matches.length > 0
+          ? state.recommend.data.matches[0]
+          : null;
+      const topRecHTML = topRec
+        ? `
+          <div style="display:flex;gap:14px;align-items:center;">
+            ${
+              topRec.game.cover_url
+                ? `<img src="${escapeHTML(topRec.game.cover_url)}" alt="${escapeHTML(
+                    topRec.game.title
+                  )}" style="width:64px;height:94px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.14);flex-shrink:0;background:#0d121a;" loading="lazy" />`
+                : ''
+            }
+            <div style="min-width:0;flex:1;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+                <span class="eco-badge eco-${escapeHTML(topRec.game.primary_ecosystem)}">${escapeHTML(
+            topRec.game.primary_ecosystem
+          )}</span>
+                <span class="compat-badge compat-${escapeHTML(topRec.match_status)}">● ${escapeHTML(
+            topRec.match_label
+          )}</span>
+              </div>
+              <div style="font-weight:700;font-size:1.05rem;color:var(--text-primary);">${escapeHTML(
+                topRec.game.title
+              )}</div>
+              <div class="game-sub-meta" style="margin-top:3px;">
+                Best Rig: <strong style="color:var(--accent-amber);">${escapeHTML(
+                  topRec.target_device_name
+                )}</strong> • ~${topRec.estimated_remaining_hours}h remaining
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid var(--border-subtle);">
+            <button type="button" class="btn btn-sm btn-emerald" data-overview-start-game="${
+              topRec.game.id
+            }" data-overview-target-device="${topRec.target_device_id}">
+              ▶ Start on ${escapeHTML(topRec.target_device_name)}
+            </button>
+            <button type="button" class="btn btn-sm" data-jump-tab="recommender">
+              Tune Filters →
+            </button>
+          </div>
+        `
+        : `<div class="game-sub-meta">All backlog games cleared or no matching hardware!</div>`;
+
+      analyticsGrid.innerHTML = `
+        <div class="overview-panel">
+          <div class="overview-panel-header">
+            <span class="overview-panel-title">🌐 Library Ecosystem Breakdown</span>
+            <span class="game-sub-meta">${state.games.length} Total Titles</span>
+          </div>
+          <div class="overview-bar-list">${ecoBarsHTML}</div>
+        </div>
+
+        <div class="overview-panel">
+          <div class="overview-panel-header">
+            <span class="overview-panel-title">⚙️ Hardware Demand Tier Profile</span>
+            <span class="game-sub-meta">Tier 1–5 Spec Spread</span>
+          </div>
+          <div class="overview-bar-list">${tierBarsHTML}</div>
+        </div>
+
+        <div class="overview-panel" style="border-color:rgba(245,158,11,0.4);">
+          <div class="overview-panel-header">
+            <span class="overview-panel-title">🎯 #1 Priority Backlog Dispatch</span>
+            <span class="rec-rank-badge">TOP PICK</span>
+          </div>
+          ${topRecHTML}
+        </div>
+      `;
+
+      analyticsGrid.querySelectorAll('[data-overview-start-game]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const gameId = Number(btn.getAttribute('data-overview-start-game'));
+          const devId = Number(btn.getAttribute('data-overview-target-device'));
+          await startPlayingGame(gameId, devId);
+        });
+      });
+
+      analyticsGrid.querySelectorAll('[data-jump-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          switchTab(btn.getAttribute('data-jump-tab'));
+        });
+      });
+    }
+
+    // 3. Render Actionable Dispatch Tri-Column
     const playingHTML = playing.length
       ? playing
           .slice(0, 4)
@@ -231,18 +450,33 @@
 
     grid.innerHTML = `
       <div class="util-card">
-        <div class="util-card-header"><span class="util-rig-name">🎮 Active Playthroughs (${playing.length})</span></div>
+        <div class="util-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="util-rig-name">🎮 Active Playthroughs (${playing.length})</span>
+          <button type="button" class="btn btn-sm" data-jump-tab="library">Library →</button>
+        </div>
         <div style="margin-top:8px;">${playingHTML}</div>
       </div>
       <div class="util-card">
-        <div class="util-card-header"><span class="util-rig-name">⚡ Quick Wins (&lt;5h Backlog)</span></div>
+        <div class="util-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="util-rig-name">⚡ Quick Wins (&lt;5h Backlog)</span>
+          <button type="button" class="btn btn-sm" data-jump-tab="recommender">Recommender →</button>
+        </div>
         <div style="margin-top:8px;">${quickWinsHTML}</div>
       </div>
       <div class="util-card">
-        <div class="util-card-header"><span class="util-rig-name">⚠ Neglected Hardware (${neglected.length})</span></div>
+        <div class="util-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="util-rig-name">⚠ Neglected Hardware (${neglected.length})</span>
+          <button type="button" class="btn btn-sm" data-jump-tab="hardware">Hardware →</button>
+        </div>
         <div style="margin-top:8px;">${neglectedHTML}</div>
       </div>
     `;
+
+    grid.querySelectorAll('[data-jump-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        switchTab(btn.getAttribute('data-jump-tab'));
+      });
+    });
   }
 
   function renderUtilizationSection() {
@@ -353,6 +587,7 @@
         const recSelect = document.getElementById('rec-device-select');
         if (recSelect) recSelect.value = String(devId);
         await loadRecommendations();
+        switchTab('recommender');
         document.getElementById('section-recommender')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
@@ -473,6 +708,7 @@
   // --- SECTION 3: Spec-Aware Cross-Play Library ---
   function renderLibrarySection() {
     const tbody = document.getElementById('games-table-body');
+    const summaryBar = document.getElementById('library-summary-bar');
     if (!tbody) return;
 
     const search = state.filters.search.toLowerCase().trim();
@@ -493,6 +729,22 @@
       }
       return true;
     });
+
+    if (summaryBar) {
+      const playingCount = filtered.filter((g) => g.status === 'Playing').length;
+      const backlogCount = filtered.filter((g) => g.status === 'Backlog').length;
+      const completedCount = filtered.filter((g) => g.status === 'Completed').length;
+      const totalHltb = filtered.reduce((acc, g) => acc + (Number(g.hltb_main) || 0), 0);
+      const totalLogged = filtered.reduce((acc, g) => acc + (Number(g.hours_logged) || 0), 0);
+
+      summaryBar.innerHTML = `
+        <span class="page-summary-pill">Showing <strong>${filtered.length}</strong> of <strong>${state.games.length}</strong> games</span>
+        <span class="page-summary-pill">Playing: <strong style="color:var(--accent-cyan)">${playingCount}</strong></span>
+        <span class="page-summary-pill">Backlog: <strong style="color:var(--accent-amber)">${backlogCount}</strong></span>
+        <span class="page-summary-pill">Completed: <strong style="color:var(--accent-emerald)">${completedCount}</strong></span>
+        <span class="page-summary-pill">Filtered HLTB Main: <strong>${totalHltb.toFixed(1)}h</strong> (${totalLogged.toFixed(1)}h logged)</span>
+      `;
+    }
 
     if (filtered.length === 0) {
       tbody.innerHTML = `
@@ -685,35 +937,55 @@
     // Render Built-in Preset Catalog cards
     const presetGrid = document.getElementById('preset-catalog-grid');
     if (presetGrid) {
-      presetGrid.innerHTML = state.presets
-        .map((p) => {
-          const alreadyOwned = state.devices.some(
-            (d) => d.preset_id === p.id || d.name.toLowerCase() === p.name.toLowerCase()
-          );
-          return `
-            <div class="preset-mini-card">
-              <img src="${escapeHTML(p.photo_url)}" alt="${escapeHTML(p.name)}" style="width:100%;height:96px;object-fit:contain;padding:6px;border-radius:6px;margin-bottom:8px;background:#0d121a;border:1px solid rgba(255,255,255,0.06);" loading="lazy" />
-              <div class="preset-mini-top">
-                <span class="preset-mini-name">${escapeHTML(p.name)}</span>
-                <span class="tier-badge">T${p.performance_tier}</span>
+      presetGrid.style.display = state.filters.presetsCollapsed ? 'none' : '';
+      const q = (state.filters.presetSearch || '').toLowerCase().trim();
+      const filteredPresets = state.presets.filter((p) => {
+        if (!q) return true;
+        return (
+          p.name.toLowerCase().includes(q) ||
+          (p.cpu || '').toLowerCase().includes(q) ||
+          (p.gpu || '').toLowerCase().includes(q) ||
+          (p.ecosystems || []).some((e) => e.toLowerCase().includes(q)) ||
+          `t${p.performance_tier}` === q ||
+          `tier ${p.performance_tier}` === q
+        );
+      });
+
+      if (filteredPresets.length === 0) {
+        presetGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">No console presets match "${escapeHTML(
+          state.filters.presetSearch
+        )}".</div>`;
+      } else {
+        presetGrid.innerHTML = filteredPresets
+          .map((p) => {
+            const alreadyOwned = state.devices.some(
+              (d) => d.preset_id === p.id || d.name.toLowerCase() === p.name.toLowerCase()
+            );
+            return `
+              <div class="preset-mini-card">
+                <img src="${escapeHTML(p.photo_url)}" alt="${escapeHTML(p.name)}" style="width:100%;height:96px;object-fit:contain;padding:6px;border-radius:6px;margin-bottom:8px;background:#0d121a;border:1px solid rgba(255,255,255,0.06);" loading="lazy" />
+                <div class="preset-mini-top">
+                  <span class="preset-mini-name">${escapeHTML(p.name)}</span>
+                  <span class="tier-badge">T${p.performance_tier}</span>
+                </div>
+                <div class="preset-mini-spec" title="${escapeHTML(p.cpu)}">${escapeHTML(p.cpu)}</div>
+                <div class="preset-mini-spec" title="${escapeHTML(p.gpu)}">${escapeHTML(p.gpu)}</div>
+                <div class="rig-ecosystems" style="margin-top:2px;">
+                  ${p.ecosystems.map((e) => `<span class="eco-badge eco-${escapeHTML(e)}">${escapeHTML(e)}</span>`).join('')}
+                </div>
+                <div class="preset-mini-actions">
+                  <button type="button" class="btn btn-sm btn-primary" data-quick-add-preset="${escapeHTML(p.id)}">
+                    ${alreadyOwned ? '+ Add Another' : '+ Quick Deploy'}
+                  </button>
+                  <button type="button" class="btn btn-sm" data-customize-preset="${escapeHTML(p.id)}">
+                    Customize
+                  </button>
+                </div>
               </div>
-              <div class="preset-mini-spec" title="${escapeHTML(p.cpu)}">${escapeHTML(p.cpu)}</div>
-              <div class="preset-mini-spec" title="${escapeHTML(p.gpu)}">${escapeHTML(p.gpu)}</div>
-              <div class="rig-ecosystems" style="margin-top:2px;">
-                ${p.ecosystems.map((e) => `<span class="eco-badge eco-${escapeHTML(e)}">${escapeHTML(e)}</span>`).join('')}
-              </div>
-              <div class="preset-mini-actions">
-                <button type="button" class="btn btn-sm btn-primary" data-quick-add-preset="${escapeHTML(p.id)}">
-                  ${alreadyOwned ? '+ Add Another' : '+ Quick Deploy'}
-                </button>
-                <button type="button" class="btn btn-sm" data-customize-preset="${escapeHTML(p.id)}">
-                  Customize
-                </button>
-              </div>
-            </div>
-          `;
-        })
-        .join('');
+            `;
+          })
+          .join('');
+      }
 
       presetGrid.querySelectorAll('[data-quick-add-preset]').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -761,7 +1033,7 @@
     if (!hwGrid) return;
 
     if (state.devices.length === 0) {
-      hwGrid.innerHTML = `<div class="empty-state">No hardware rigs registered yet. Deploy a preset above or click "+ Add Custom Build / Handheld".</div>`;
+      hwGrid.innerHTML = `<div class="empty-state">No hardware rigs registered yet. Deploy a preset below or click "+ Add Custom Build / Handheld".</div>`;
       return;
     }
 
@@ -1039,7 +1311,7 @@
     });
   }
 
-  // --- Section Tab Switching ---
+  // --- Section Tab Switching (Each Page Shows Only Its Own Dedicated Content) ---
   function switchTab(section) {
     state.activeTab = section;
     document.querySelectorAll('.nav-tab').forEach((btn) => {
@@ -1053,17 +1325,30 @@
     const secHw = document.getElementById('section-hardware');
 
     if (section === 'all') {
+      // Command Overview: ONLY executive telemetry + fleet utilization (no duplication of recommender/library/hardware tables)
       if (secBrief) secBrief.style.display = '';
-      secUtil.style.display = '';
-      secRec.style.display = '';
-      secLib.style.display = '';
-      secHw.style.display = '';
-    } else {
+      if (secUtil) secUtil.style.display = '';
+      if (secRec) secRec.style.display = 'none';
+      if (secLib) secLib.style.display = 'none';
+      if (secHw) secHw.style.display = 'none';
+    } else if (section === 'recommender') {
       if (secBrief) secBrief.style.display = 'none';
-      secUtil.style.display = section === 'recommender' ? '' : 'none';
-      secRec.style.display = section === 'recommender' ? '' : 'none';
-      secLib.style.display = section === 'library' ? '' : 'none';
-      secHw.style.display = section === 'hardware' ? '' : 'none';
+      if (secUtil) secUtil.style.display = 'none';
+      if (secRec) secRec.style.display = '';
+      if (secLib) secLib.style.display = 'none';
+      if (secHw) secHw.style.display = 'none';
+    } else if (section === 'library') {
+      if (secBrief) secBrief.style.display = 'none';
+      if (secUtil) secUtil.style.display = 'none';
+      if (secRec) secRec.style.display = 'none';
+      if (secLib) secLib.style.display = '';
+      if (secHw) secHw.style.display = 'none';
+    } else if (section === 'hardware') {
+      if (secBrief) secBrief.style.display = 'none';
+      if (secUtil) secUtil.style.display = '';
+      if (secRec) secRec.style.display = 'none';
+      if (secLib) secLib.style.display = 'none';
+      if (secHw) secHw.style.display = '';
     }
   }
 
@@ -1074,6 +1359,37 @@
       btn.addEventListener('click', () => {
         switchTab(btn.getAttribute('data-section'));
       });
+    });
+
+    // Overview header quick-jump buttons
+    document.querySelectorAll('.overview-quick-jumps [data-jump-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-jump-tab');
+        if (target) {
+          switchTab(target);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
+
+    // Preset Catalog Search & Collapse in Hardware Registry
+    document.getElementById('preset-search-input')?.addEventListener('input', (e) => {
+      state.filters.presetSearch = e.target.value;
+      if (state.filters.presetsCollapsed) {
+        state.filters.presetsCollapsed = false;
+        const toggleBtn = document.getElementById('btn-toggle-preset-catalog');
+        if (toggleBtn) toggleBtn.textContent = 'Hide Preset Catalog ▲';
+      }
+      renderPresetsAndHardware();
+    });
+
+    document.getElementById('btn-toggle-preset-catalog')?.addEventListener('click', () => {
+      state.filters.presetsCollapsed = !state.filters.presetsCollapsed;
+      const toggleBtn = document.getElementById('btn-toggle-preset-catalog');
+      if (toggleBtn) {
+        toggleBtn.textContent = state.filters.presetsCollapsed ? 'Show Preset Catalog ▼' : 'Hide Preset Catalog ▲';
+      }
+      renderPresetsAndHardware();
     });
 
     // Open Modals
