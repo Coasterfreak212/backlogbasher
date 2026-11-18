@@ -73,27 +73,39 @@
 
   <!-- Main ERP Workspace -->
   <main class="erp-main">
-    <!-- SECTION 0: Actionable Command Brief -->
+    <!-- PAGE 1: Command Overview (Dedicated Executive Dashboard — No Duplicate Tables/Grids) -->
     <section id="section-command-brief" class="erp-section" aria-labelledby="heading-command-brief">
       <div class="section-header">
         <div class="section-title-group">
-          <span class="section-eyebrow">COMMAND BRIEF // ACTIVE DISPATCH &amp; QUICK WINS</span>
+          <span class="section-eyebrow">EXECUTIVE TELEMETRY // FLEET &amp; BACKLOG COMMAND CENTER</span>
           <h2 id="heading-command-brief" class="section-title">Command Overview</h2>
-          <p class="section-desc">At-a-glance active playthroughs, sub-5h backlog quick wins, and neglected hardware alerts.</p>
+          <p class="section-desc">Executive summary of backlog velocity, ecosystem &amp; demand-tier distribution, active playthroughs, quick wins, and fleet utilization.</p>
+        </div>
+        <div class="overview-quick-jumps">
+          <button type="button" class="btn btn-sm" data-jump-tab="recommender">🎯 Open Recommender →</button>
+          <button type="button" class="btn btn-sm" data-jump-tab="library">📚 Browse Library →</button>
+          <button type="button" class="btn btn-sm" data-jump-tab="hardware">🕹️ Manage Hardware →</button>
         </div>
       </div>
       <div class="section-body">
-        <div id="command-brief-grid" class="utilization-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));"></div>
+        <!-- Row 1: 6 Executive Metric Cards -->
+        <div id="overview-kpi-grid" class="overview-kpi-grid"></div>
+
+        <!-- Row 2: Analytics Breakdown (Ecosystem Share + Demand Tier Balance + Top Recommended Dispatch) -->
+        <div id="overview-analytics-grid" class="overview-analytics-grid"></div>
+
+        <!-- Row 3: Actionable Dispatch Tri-Column (Active Playthroughs, Quick Wins <5h, Neglected Rigs) -->
+        <div id="command-brief-grid" class="overview-dispatch-grid"></div>
       </div>
     </section>
 
-    <!-- SECTION 1: Console Love / Utilization Summary -->
+    <!-- Console Love / Fleet Utilization Breakdown (Shown on Command Overview & Hardware Asset Registry) -->
     <section id="section-utilization" class="erp-section" aria-labelledby="heading-utilization">
       <div class="section-header">
         <div class="section-title-group">
           <span class="section-eyebrow">TELEMETRY // HARDWARE UTILIZATION &amp; NEGLECT DETECTOR</span>
           <h2 id="heading-utilization" class="section-title">Console Love &amp; Fleet Utilization Breakdown</h2>
-          <p class="section-desc">Track total hours logged and active backlog queue per rig to spot neglected hardware at a glance.</p>
+          <p class="section-desc">Track total hours logged, playtime share, and compatible backlog queue per rig to spot neglected hardware at a glance.</p>
         </div>
       </div>
       <div class="section-body">
@@ -109,8 +121,8 @@
       </div>
     </section>
 
-    <!-- SECTION 2: Next-Game Recommender -->
-    <section id="section-recommender" class="erp-section" aria-labelledby="heading-recommender">
+    <!-- PAGE 2: Next-Game Recommender (Hidden on Command Overview; Dedicated Decision Engine Page) -->
+    <section id="section-recommender" class="erp-section" style="display: none;" aria-labelledby="heading-recommender">
       <div class="section-header">
         <div class="section-title-group">
           <span class="section-eyebrow">DECISION ENGINE // SPEC-AWARE BACKLOG DISPATCH</span>
@@ -153,8 +165,8 @@
       </div>
     </section>
 
-    <!-- SECTION 3: Spec-Aware Cross-Play & Library Management -->
-    <section id="section-library" class="erp-section" aria-labelledby="heading-library">
+    <!-- PAGE 3: Spec-Aware Cross-Play & Library Management (Hidden on Command Overview; Dedicated Library Page) -->
+    <section id="section-library" class="erp-section" style="display: none;" aria-labelledby="heading-library">
       <div class="section-header">
         <div class="section-title-group">
           <span class="section-eyebrow">CROSS-PLAY MATRIX // HLTB &amp; DEMAND TIER REGISTRY</span>
@@ -167,6 +179,8 @@
         </div>
       </div>
       <div class="section-body">
+        <div id="library-summary-bar" class="page-summary-bar"></div>
+
         <div class="library-toolbar">
           <div class="filter-cluster">
             <input id="lib-search-input" type="search" class="input-field" placeholder="Search title or genre..." aria-label="Search games" />
@@ -210,30 +224,42 @@
       </div>
     </section>
 
-    <!-- SECTION 4: Hardware Asset Registry (Preset Catalog + Custom Rigs) -->
-    <section id="section-hardware" class="erp-section" aria-labelledby="heading-hardware">
+    <!-- PAGE 4: Hardware Asset Registry (Hidden on Command Overview; Dedicated Hardware Page) -->
+    <section id="section-hardware" class="erp-section" style="display: none;" aria-labelledby="heading-hardware">
       <div class="section-header">
         <div class="section-title-group">
-          <span class="section-eyebrow">ASSET INVENTORY // PRESET CATALOG + CUSTOM BUILDS &amp; HANDHELDS</span>
+          <span class="section-eyebrow">ASSET INVENTORY // OWNED FLEET + 31 GENERATIONAL CONSOLE PRESETS</span>
           <h2 id="heading-hardware" class="section-title">Hardware Asset Registry</h2>
-          <p class="section-desc">Register standard consoles from the built-in preset database (with Wikimedia Commons hardware photography) or configure custom handhelds and living-room PCs.</p>
+          <p class="section-desc">Manage your active owned rigs first, or deploy standard consoles from the collapsible 31-preset generational catalog below.</p>
         </div>
         <button id="btn-section-add-device" class="btn btn-primary" type="button">+ Add Custom Build / Handheld</button>
       </div>
       <div class="section-body">
-        <!-- Built-in Preset Database Strip -->
+        <!-- Owned Rigs Subheader -->
+        <div class="sub-section-bar">
+          <div>
+            <span class="section-eyebrow">ACTIVE FLEET INVENTORY // OWNED CONSOLES, HANDHELDS &amp; PC RIGS</span>
+            <div class="section-desc">Hardware rigs currently registered in your home gaming fleet and evaluated by the Cross-Play Engine.</div>
+          </div>
+        </div>
+
+        <!-- Owned Rigs Grid -->
+        <div id="hardware-rigs-grid" class="hardware-grid" style="margin-bottom: 24px;"></div>
+
+        <!-- Built-in Preset Database Strip (Collapsible / Filterable) -->
         <div class="preset-strip">
           <div class="preset-strip-header">
             <div>
               <span class="section-eyebrow">BUILT-IN HARDWARE PRESET CATALOG (31 GENERATIONAL CONSOLES &amp; HANDHELDS)</span>
-              <div class="section-desc">One-click deploy a standard console preset (Atari 2600 through PS5, Switch, Series X, Steam Deck OLED, ROG Ally X) or pre-fill the custom rig builder.</div>
+              <div class="section-desc">One-click deploy a standard console preset (Atari 2600 through PS5, Switch, Series X, Steam Deck OLED, ROG Ally X) with Wikimedia Commons photography.</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input id="preset-search-input" type="search" class="input-field" placeholder="Filter 31 presets..." style="padding:5px 10px;font-size:0.8rem;" />
+              <button id="btn-toggle-preset-catalog" type="button" class="btn btn-sm">Hide Preset Catalog ▲</button>
             </div>
           </div>
           <div id="preset-catalog-grid" class="preset-cards-row"></div>
         </div>
-
-        <!-- Owned Rigs Grid -->
-        <div id="hardware-rigs-grid" class="hardware-grid"></div>
       </div>
     </section>
   </main>
