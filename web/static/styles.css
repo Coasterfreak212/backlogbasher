@@ -1561,6 +1561,38 @@ html, body {
   color: var(--accent-cyan);
 }
 
+/* Sortable Table Column Headers */
+.library-table th.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.14s ease, background 0.14s ease;
+  white-space: nowrap;
+}
+
+.library-table th.sortable-th:hover,
+.library-table th.sortable-th:focus {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
+.library-table th.sortable-th.active {
+  color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.sort-indicator {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+
+.library-table th.sortable-th.active .sort-indicator {
+  opacity: 1;
+  color: var(--accent-amber);
+}
+
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: 1fr;

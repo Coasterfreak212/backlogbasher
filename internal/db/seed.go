@@ -69,14 +69,27 @@ func DefaultGameCoverURLs() map[string]string {
 	}
 }
 
-// LookupDefaultCoverURL finds a cover art URL by case-insensitive title match.
+func normalizeCoverKey(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	r := strings.NewReplacer(":", "", "-", " ", "'", "", "’", "", ".", "", "!", "", "ö", "o", "(", "", ")", "")
+	return strings.Join(strings.Fields(r.Replace(s)), " ")
+}
+
+// LookupDefaultCoverURL finds a cover art URL by case- and punctuation-insensitive title match.
 func LookupDefaultCoverURL(title string) (string, bool) {
-	clean := strings.ToLower(strings.TrimSpace(title))
-	if clean == "" {
+	norm := normalizeCoverKey(title)
+	if norm == "" {
 		return "", false
 	}
-	for k, v := range DefaultGameCoverURLs() {
-		if strings.ToLower(k) == clean {
+	covers := DefaultGameCoverURLs()
+	for k, v := range covers {
+		if normalizeCoverKey(k) == norm {
+			return v, true
+		}
+	}
+	for k, v := range covers {
+		nk := normalizeCoverKey(k)
+		if strings.HasPrefix(nk, norm) || strings.HasPrefix(norm, nk) {
 			return v, true
 		}
 	}

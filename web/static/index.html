@@ -107,6 +107,16 @@
           <h2 id="heading-utilization" class="section-title">Console Love &amp; Fleet Utilization Breakdown</h2>
           <p class="section-desc">Track total hours logged, playtime share, and compatible backlog queue per rig to spot neglected hardware at a glance.</p>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <label for="util-sort-select" class="control-label" style="margin:0;">Sort Rigs:</label>
+          <select id="util-sort-select" class="select-field" style="padding:5px 10px;font-size:0.8rem;" aria-label="Sort utilization cards">
+            <option value="hours_desc">Hours Logged (High → Low)</option>
+            <option value="hours_asc">Hours Logged (Low / Neglected First)</option>
+            <option value="backlog_desc">Compatible Backlog (High → Low)</option>
+            <option value="tier_desc">Performance Tier (T5 → T1)</option>
+            <option value="name_asc">Rig Name (A → Z)</option>
+          </select>
+        </div>
       </div>
       <div class="section-body">
         <div class="fleet-bar-container">
@@ -171,7 +181,7 @@
         <div class="section-title-group">
           <span class="section-eyebrow">CROSS-PLAY MATRIX // HLTB &amp; DEMAND TIER REGISTRY</span>
           <h2 id="heading-library" class="section-title">Spec-Aware Cross-Play Game Library</h2>
-          <p class="section-desc">Dynamic compatibility badges compare each game's Performance Demand Tier (1–5) against every owned rig sharing its ecosystem.</p>
+          <p class="section-desc">Dynamic compatibility badges compare each game's Performance Demand Tier (1–5) against every owned rig sharing its ecosystem. Click any column header to sort.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button id="btn-library-sync-sgdb" class="btn btn-cyan" type="button">🖼️ Sync Cover Art (SteamGridDB)</button>
@@ -209,12 +219,30 @@
           <table class="library-table" id="games-table">
             <thead>
               <tr>
-                <th>Title &amp; Ecosystem</th>
-                <th>Status</th>
-                <th>Demand Tier</th>
-                <th>Smart Cross-Play Compatibility (Per Owned Rig)</th>
-                <th>HLTB Estimates (Main / +Extra / 100%)</th>
-                <th>Hours Logged &amp; Primary Rig</th>
+                <th class="sortable-th active" data-sort-col="title" role="button" tabindex="0" title="Sort by Game Title">
+                  <span>Title &amp; Ecosystem</span>
+                  <span class="sort-indicator" data-sort-icon="title">▲</span>
+                </th>
+                <th class="sortable-th" data-sort-col="status" role="button" tabindex="0" title="Sort by Status">
+                  <span>Status</span>
+                  <span class="sort-indicator" data-sort-icon="status">↕</span>
+                </th>
+                <th class="sortable-th" data-sort-col="demand_tier" role="button" tabindex="0" title="Sort by Performance Demand Tier">
+                  <span>Demand Tier</span>
+                  <span class="sort-indicator" data-sort-icon="demand_tier">↕</span>
+                </th>
+                <th class="sortable-th" data-sort-col="compatibility" role="button" tabindex="0" title="Sort by Optimal Compatible Rigs">
+                  <span>Smart Cross-Play Compatibility (Per Owned Rig)</span>
+                  <span class="sort-indicator" data-sort-icon="compatibility">↕</span>
+                </th>
+                <th class="sortable-th" data-sort-col="hltb_main" role="button" tabindex="0" title="Sort by HLTB Main Story Hours">
+                  <span>HLTB Estimates (Main / +Extra / 100%)</span>
+                  <span class="sort-indicator" data-sort-icon="hltb_main">↕</span>
+                </th>
+                <th class="sortable-th" data-sort-col="hours_logged" role="button" tabindex="0" title="Sort by Hours Logged">
+                  <span>Hours Logged &amp; Primary Rig</span>
+                  <span class="sort-indicator" data-sort-icon="hours_logged">↕</span>
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -241,6 +269,15 @@
             <span class="section-eyebrow">ACTIVE FLEET INVENTORY // OWNED CONSOLES, HANDHELDS &amp; PC RIGS</span>
             <div class="section-desc">Hardware rigs currently registered in your home gaming fleet and evaluated by the Cross-Play Engine.</div>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <label for="hw-sort-select" class="control-label" style="margin:0;">Sort Owned Rigs:</label>
+            <select id="hw-sort-select" class="select-field" style="padding:5px 10px;font-size:0.8rem;" aria-label="Sort owned hardware rigs">
+              <option value="tier_desc">Performance Tier (T5 → T1)</option>
+              <option value="tier_asc">Performance Tier (T1 → T5)</option>
+              <option value="name_asc">Rig Name (A → Z)</option>
+              <option value="name_desc">Rig Name (Z → A)</option>
+            </select>
+          </div>
         </div>
 
         <!-- Owned Rigs Grid -->
@@ -255,6 +292,12 @@
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input id="preset-search-input" type="search" class="input-field" placeholder="Filter 31 presets..." style="padding:5px 10px;font-size:0.8rem;" />
+              <select id="preset-sort-select" class="select-field" style="padding:5px 10px;font-size:0.8rem;" aria-label="Sort preset catalog">
+                <option value="default">Default Order (Generational)</option>
+                <option value="tier_desc">Performance Tier (T5 → T1)</option>
+                <option value="tier_asc">Performance Tier (T1 → T5)</option>
+                <option value="name_asc">Console Name (A → Z)</option>
+              </select>
               <button id="btn-toggle-preset-catalog" type="button" class="btn btn-sm">Hide Preset Catalog ▲</button>
             </div>
           </div>
@@ -288,9 +331,10 @@
 
           <div class="form-group full">
             <label for="game-cover-url-input" class="form-label">Cover Art URL (SteamGridDB / Remote Image URL)</label>
-            <div class="hltb-fetch-row">
-              <input id="game-cover-url-input" name="cover_url" type="url" class="input-field" placeholder="Auto-sourced via SteamGridDB or paste remote cover URL..." />
-              <button id="btn-fetch-sgdb-cover" type="button" class="btn">🖼️ Fetch SteamGridDB Cover</button>
+            <div class="hltb-fetch-row" style="align-items:center;">
+              <img id="game-cover-preview" src="" alt="Cover preview" style="display:none;width:42px;height:60px;object-fit:cover;border-radius:5px;border:1px solid rgba(56,189,248,0.45);background:#0d121a;flex-shrink:0;" />
+              <input id="game-cover-url-input" name="cover_url" type="url" class="input-field" placeholder="Auto-sourced via HLTB / SteamGridDB or paste remote cover URL..." />
+              <button id="btn-fetch-sgdb-cover" type="button" class="btn">🖼️ Fetch Cover</button>
             </div>
           </div>
 

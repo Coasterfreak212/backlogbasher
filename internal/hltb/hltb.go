@@ -54,6 +54,7 @@ type hltbInitResponse struct {
 type hltbFindResponse struct {
 	Data []struct {
 		GameName     string  `json:"game_name"`
+		GameImage    string  `json:"game_image"`
 		CompMain     float64 `json:"comp_main"`
 		CompPlus     float64 `json:"comp_plus"`
 		Comp100      float64 `json:"comp_100"`
@@ -330,9 +331,18 @@ func (s *Service) queryLiveHLTBList(title string, size int) ([]models.HLTBEstima
 
 	var out []models.HLTBEstimate
 	for _, item := range result.Data {
+		coverURL := ""
+		if img := strings.TrimSpace(item.GameImage); img != "" {
+			if strings.HasPrefix(img, "http") {
+				coverURL = img
+			} else {
+				coverURL = "https://howlongtobeat.com/games/" + strings.TrimLeft(img, "/")
+			}
+		}
 		out = append(out, models.HLTBEstimate{
 			Query:         title,
 			MatchedTitle:  item.GameName,
+			CoverURL:      coverURL,
 			MainStory:     roundHalf(item.CompMain),
 			MainExtras:    roundHalf(item.CompPlus),
 			Completionist: roundHalf(item.Comp100),
